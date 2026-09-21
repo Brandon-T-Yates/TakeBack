@@ -1,5 +1,25 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
+import '../models/restriction_status.dart';
+
+class AuthorizationSummary extends StatelessWidget {
+  const AuthorizationSummary(this.status, {super.key});
+  final AuthorizationStatus status;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    child: Text(switch (status) {
+      AuthorizationStatus.authorized => 'Screen Time access is authorized.',
+      AuthorizationStatus.denied =>
+        'Screen Time access is denied. Authorize again to choose apps.',
+      AuthorizationStatus.notDetermined =>
+        'Screen Time access is not authorized yet.',
+      AuthorizationStatus.unavailable =>
+        'Screen Time setup is unavailable on this device.',
+    }),
+  );
+}
 
 class PrototypeNotice extends StatelessWidget {
   const PrototypeNotice({super.key});
@@ -63,8 +83,9 @@ class DisclaimerText extends StatelessWidget {
       SizedBox(height: 24),
       _DisclaimerItem(
         'This is an early prototype',
-        'Permissions and app selection are not connected yet. LOCK IN only '
-            'changes the state inside TakeBack; other apps remain accessible.',
+        'Screen Time authorization and app selection are available on supported '
+            'iPhones. LOCK IN only changes the state inside TakeBack; other apps '
+            'remain accessible. Android setup is not available yet.',
       ),
     ],
   );

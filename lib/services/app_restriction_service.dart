@@ -5,10 +5,13 @@ import '../models/restriction_status.dart';
 /// preference. Native selection tokens stay native.
 abstract interface class AppRestrictionService {
   RestrictionMode get mode;
+  Future<RestrictionSetupState> getSetupState();
+  Stream<RestrictionSetupState> get setupChanges;
   Future<AuthorizationStatus> requestAuthorization();
   Future<AppSelectionResult> selectAllowedApps();
   Future<void> enableLockdown();
   Future<void> disableLockdown();
   Future<void> toggleLockdown();
   Future<bool> isLockdownEnabled();
+  void dispose();
 }

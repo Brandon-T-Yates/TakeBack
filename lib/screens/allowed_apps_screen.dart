@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../state/takeback_controller.dart';
+import '../models/restriction_status.dart';
 import '../theme.dart';
 import '../widgets/brand.dart';
 import '../widgets/notices.dart';
@@ -34,7 +35,7 @@ class AllowedAppsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Choose the apps that should remain accessible when TakeBack is locked in.',
+              'Choose individual apps to ALLOW during a future lock session. No apps are blocked yet.',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const Spacer(),
@@ -46,25 +47,56 @@ class AllowedAppsScreen extends StatelessWidget {
                 border: Border.all(color: ink.withValues(alpha: 0.14)),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Column(
+              child: Column(
                 children: [
-                  Icon(Icons.apps_rounded, size: 42, color: muted),
-                  SizedBox(height: 18),
+                  const Icon(Icons.apps_rounded, size: 42, color: muted),
+                  const SizedBox(height: 18),
                   Text(
-                    'App selection is coming soon',
+                    controller.setup.available
+                        ? controller.setup.selectionUsable
+                              ? '${controller.setup.applicationCount} allowed apps saved'
+                              : 'No usable app selection saved'
+                        : Theme.of(context).platform == TargetPlatform.iOS
+                        ? 'App selection requires an iPhone'
+                        : 'App selection is coming soon',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                       color: ink,
                     ),
                   ),
-                  SizedBox(height: 12),
+                  const SizedBox(height: 12),
                   Text(
-                    'The native app picker will be connected in the next iOS phase. '
-                    'No apps have been selected or restricted.',
+                    controller.setup.available
+                        ? 'Select individual apps only. Expand categories to choose apps; '
+                              'category and website selections cannot be saved. '
+                              'You can review your saved apps in the native picker.'
+                        : Theme.of(context).platform == TargetPlatform.iOS
+                        ? 'Use a provisioned physical iPhone to authorize Screen Time '
+                              'and select apps. The simulator supports prototype navigation only.'
+                        : 'Android app selection is not available yet. No apps are restricted.',
                     textAlign: TextAlign.center,
                   ),
+                  if (controller.setup.available) ...[
+                    const SizedBox(height: 20),
+                    AuthorizationSummary(controller.authorization),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: controller.busy
+                          ? null
+                          : controller.authorization ==
+                                AuthorizationStatus.authorized
+                          ? controller.chooseAllowedApps
+                          : controller.authorize,
+                      child: Text(
+                        controller.authorization ==
+                                AuthorizationStatus.authorized
+                            ? 'Choose Allowed Apps'
+                            : 'Authorize Screen Time',
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

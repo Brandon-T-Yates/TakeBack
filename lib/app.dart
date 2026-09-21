@@ -14,17 +14,24 @@ class TakeBackApp extends StatefulWidget {
   State<TakeBackApp> createState() => _TakeBackAppState();
 }
 
-class _TakeBackAppState extends State<TakeBackApp> {
+class _TakeBackAppState extends State<TakeBackApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.controller.initialize();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) widget.controller.refreshSetup();
   }
 
   @override

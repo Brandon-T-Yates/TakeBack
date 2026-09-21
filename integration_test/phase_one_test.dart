@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:takeback/app.dart';
 import 'package:takeback/services/local_app_restriction_service.dart';
+import 'package:takeback/services/ios_app_restriction_service.dart';
 import 'package:takeback/services/preferences_store.dart';
 import 'package:takeback/state/takeback_controller.dart';
 
 TakeBackApp freshApp() {
   final store = PreferencesStore();
+  final prototype = LocalAppRestrictionService(store);
   return TakeBackApp(
     controller: TakeBackController(
       preferences: store,
-      restrictions: LocalAppRestrictionService(store),
+      restrictions: defaultTargetPlatform == TargetPlatform.iOS
+          ? IosAppRestrictionService(prototype)
+          : prototype,
     ),
   );
 }
@@ -40,8 +45,19 @@ void main() {
     await tester.pumpAndSettle();
     await tap('Get Started');
     await tap('I Understand');
-    await tap('Continue');
-    expect(find.text('App selection is coming soon'), findsOneWidget);
+    await tap(
+      defaultTargetPlatform == TargetPlatform.iOS
+          ? 'Continue in Prototype'
+          : 'Continue',
+    );
+    expect(
+      find.text(
+        defaultTargetPlatform == TargetPlatform.iOS
+            ? 'App selection requires an iPhone'
+            : 'App selection is coming soon',
+      ),
+      findsOneWidget,
+    );
     await tap('Continue to TakeBack');
     await tap('LOCK IN');
     expect(find.text('LOCKED IN'), findsOneWidget);

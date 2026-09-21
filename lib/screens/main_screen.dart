@@ -30,7 +30,9 @@ class MainScreen extends StatelessWidget {
           IconButton(
             tooltip: 'Settings',
             onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+              MaterialPageRoute<void>(
+                builder: (_) => SettingsScreen(controller: controller),
+              ),
             ),
             icon: const Icon(Icons.settings_outlined, size: 23),
           ),

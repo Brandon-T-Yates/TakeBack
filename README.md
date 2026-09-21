@@ -1,14 +1,15 @@
 # TakeBack
 
-Take back your attention. A Flutter prototype for iOS and Android.
+Take back your attention. Flutter for iOS and Android.
 
-**Phase 1 only: no apps are blocked.** Permissions and app selection are honest
-placeholders. LOCK IN / UNLOCK changes a locally saved simulation.
+**Phase 2: no apps are blocked.** Supported physical iPhones can authorize Screen
+Time and save an app-specific allowlist. LOCK IN / UNLOCK still changes only the
+saved prototype state. Android and iOS simulators retain prototype navigation.
 
 ## Run
 
 Use Flutter 3.35.7 / Dart 3.9.2 or a compatible newer stable SDK. iOS requires
-Xcode and CocoaPods; Android requires the Android SDK and a configured emulator.
+Xcode, CocoaPods, and iOS 16+. Android requires the Android SDK.
 
 ```sh
 flutter pub get
@@ -16,30 +17,45 @@ flutter devices
 flutter run -d <device-id>
 ```
 
-Open an iOS simulator or launch an Android emulator before running. Physical iOS
-devices also require a signing team in `ios/Runner.xcworkspace`.
+Real iOS setup requires Apple Developer Program signing and a physical iPhone.
+Open `ios/Runner.xcworkspace`, select Runner → Signing & Capabilities, choose your
+team and a unique bundle identifier, enable automatic signing, and confirm
+**Family Controls (Development)**. Connect/trust an iPhone and enable Developer
+Mode. See [Phase 2 handoff](docs/phase-2-handoff.md) for provisioning and checks.
 
 ## Structure
 
 ```text
 lib/
   main.dart, app.dart, theme.dart
-  screens/    # Welcome, disclaimer, permissions, allowed apps, main, settings
-  widgets/    # Branding, page layout, shared notices
-  models/     # Restriction mode and operation results
-  services/   # Restriction interface, local simulation, preferences
+  screens/    # Existing onboarding, allowed apps, main, settings
+  widgets/    # Branding, layout and notices
+  models/     # Authorization and selection metadata
+  services/   # Shared interface, iOS channel, prototype service, preferences
   state/      # ChangeNotifier controller
-test/         # Basic unit/widget checks
-integration_test/  # One device smoke test
-ios/, android/     # Native Flutter runners
+ios/Runner/   # FamilyControlsBridge, AllowedAppsPicker, AllowedAppsStore
+              # AppDelegate registration and Runner.entitlements
+test/        # Flutter unit/widget checks
+integration_test/  # Prototype navigation/device-storage smoke test
 ```
 
-`shared_preferences` is the only extra runtime dependency. `SharedPreferencesAsync`
-saves disclaimer acceptance, onboarding completion, and
-`takeback.prototype.lockdownEnabled`. That last key is **never** a native
-restriction state and must not be migrated into one. Native app tokens will stay
-behind `AppRestrictionService`; there is no fake app list. State and navigation
-use Flutter's built-in APIs. `integration_test` is an SDK-only development dependency.
+`shared_preferences` remains the only additional runtime dependency; Phase 2
+adds no packages. The iOS service uses `takeback/family_controls` for native setup
+and delegates locking to the local simulation. Opaque app tokens stay in native
+storage; Flutter receives authorization, counts and selection usability only.
+
+`takeback.prototype.lockdownEnabled` is never a native restriction state.
+The separate native key `takeback.ios.allowedApplications.v1` stores an encoded,
+app-only selection. Detected loss of authorization clears it and requires
+reselection. Existing users can authorize through **Edit Allowed Apps**.
+
+## Picker limitation
+
+Apple's picker exposes categories and websites; TakeBack does not support them.
+Expand categories and select individual apps. Save rejects category/web tokens
+with an explanation and preserves the previous allowlist. Category expansion is
+never used to manufacture application selections. Real picker behavior—including
+any automatic category selection—still needs physical-iPhone verification.
 
 ## Check
 
@@ -47,26 +63,23 @@ use Flutter's built-in APIs. `integration_test` is an SDK-only development depen
 flutter analyze
 flutter test
 flutter build ios --simulator
-flutter build apk --debug
-flutter test integration_test/phase_one_test.dart -d <device-id>
+flutter build ios --no-codesign
+flutter test integration_test/phase_one_test.dart -d <simulator-id>
 ```
 
-The device smoke test resets only TakeBack's three setup/prototype preferences.
-Manually check fresh onboarding, LOCK IN, force-quit/reopen while locked, UNLOCK,
-Edit Allowed Apps → Done, Settings → Back, and larger system text. The prototype
-notice must remain visible on Main. To repeat first launch, clear app data or
-uninstall/reinstall on a test device.
+The smoke test resets only the three Flutter setup/prototype preferences and
+exercises simulator fallback, not real authorization. Native tests are in
+`ios/RunnerTests`; run Runner's test scheme on a simulator from Xcode.
 
-## Limits and next phase
+On a signed iPhone, manually check authorization approval/denial/cancellation,
+app-only selection, unsupported category/website rejection, Cancel, relaunch
+restoration, editing, and revocation. Also check lock/reopen/unlock and the
+persistent prototype notice. Details and validation results are in the handoff.
 
-Development identifiers are `com.example.takeback`; signing and release branding
-are not configured. There is no OS blocking, authorization, native picker, NFC,
-backend, authentication, or cloud sync. The saved simulation survives restarts;
-incomplete setup resumes after the disclaimer when acceptance has been saved.
+## Limits
 
-Phase 2 (not implemented): configure Family Controls capability/entitlements,
-add individual Screen Time authorization and a native allowed-app picker,
-persist opaque tokens natively, and bridge through `AppRestrictionService`.
-Validate on a physical iPhone, including denied/revoked authorization and picker
-cancellation. Verify the allowlist restriction approach before adding real
-blocking. Never activate real restrictions from a saved prototype lock.
+Signing is not configured; the development identifier is `com.example.takeback`.
+There is no ManagedSettings shielding, Android setup, NFC, Shortcuts, App Intents,
+backend or cloud sync. Distribution approval is separate from development signing.
+Phase 3 must validate allowlist shielding and safe unlocking before introducing
+real restrictions. Never activate them from the saved prototype lock.

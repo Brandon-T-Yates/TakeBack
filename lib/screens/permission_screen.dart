@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../state/takeback_controller.dart';
+import '../models/restriction_status.dart';
 import '../theme.dart';
 import '../widgets/brand.dart';
 import '../widgets/notices.dart';
@@ -11,6 +12,9 @@ class PermissionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    final available = controller.setup.available;
+    final authorized =
+        controller.authorization == AuthorizationStatus.authorized;
     return Scaffold(
       appBar: AppBar(title: const Brand()),
       body: PageBody(
@@ -29,25 +33,48 @@ class PermissionScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               isIOS
-                  ? 'TakeBack will use Screen Time authorization to restrict apps on your iPhone.'
+                  ? 'Authorize Screen Time to choose the apps you want to allow in a future lock session.'
                   : 'TakeBack will need device permissions to restrict apps. '
                         'Android blocking will follow the iOS implementation.',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Permission setup is coming in a future version. Continuing '
-              'does not request or grant any device permissions.',
+            Text(
+              !isIOS
+                  ? 'Permission setup is coming in a future version. Continuing '
+                        'does not request or grant any device permissions.'
+                  : !available
+                  ? 'Screen Time setup requires a provisioned physical iPhone. '
+                        'It is unavailable in the simulator. You can continue in prototype mode.'
+                  : 'Authorization and app selection are real. LOCK IN remains '
+                        'a simulation and does not block any apps.',
             ),
+            if (available) ...[
+              const SizedBox(height: 20),
+              AuthorizationSummary(controller.authorization),
+            ],
             const SizedBox(height: 36),
             const Spacer(),
             const PrototypeNotice(),
             const SizedBox(height: 20),
             ErrorNotice(controller.error),
-            FilledButton(
-              onPressed: controller.busy ? null : controller.continueSetup,
-              child: const Text('Continue'),
-            ),
+            if (available && !authorized) ...[
+              FilledButton(
+                onPressed: controller.busy ? null : controller.authorize,
+                child: const Text('Authorize Screen Time'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: controller.busy ? null : controller.continueSetup,
+                child: const Text('Continue in Prototype'),
+              ),
+            ] else
+              FilledButton(
+                onPressed: controller.busy ? null : controller.continueSetup,
+                child: Text(
+                  isIOS && !available ? 'Continue in Prototype' : 'Continue',
+                ),
+              ),
           ],
         ),
       ),

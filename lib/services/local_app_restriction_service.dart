@@ -11,6 +11,13 @@ class LocalAppRestrictionService implements AppRestrictionService {
   @override
   RestrictionMode get mode => RestrictionMode.prototype;
   @override
+  Future<RestrictionSetupState> getSetupState() async =>
+      const RestrictionSetupState();
+  @override
+  Stream<RestrictionSetupState> get setupChanges => const Stream.empty();
+  @override
+  void dispose() {}
+  @override
   Future<AuthorizationStatus> requestAuthorization() async =>
       AuthorizationStatus.unavailable;
   @override

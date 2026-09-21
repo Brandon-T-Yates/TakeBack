@@ -9,15 +9,26 @@ import UIKit
 final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDelegate {
   private let channel: FlutterMethodChannel
   private let presenter: () -> UIViewController?
-  private let store = AllowedAppsStore()
+  private let store: AllowedAppsStore
+  private let available: Bool
+  private let authorizationStatus: () -> AuthorizationStatus
   private var authorizationObserver: AnyCancellable?
   private var foregroundObserver: AnyCancellable?
   private var pickerController: UIViewController?
   private var pickerResult: FlutterResult?
   private var requestingAuthorization = false
 
-  init(messenger: FlutterBinaryMessenger, presenter: @escaping () -> UIViewController?) {
+  init(
+    messenger: FlutterBinaryMessenger,
+    store: AllowedAppsStore = AllowedAppsStore(),
+    available: Bool? = nil,
+    authorizationStatus: @escaping () -> AuthorizationStatus = { AuthorizationCenter.shared.authorizationStatus },
+    presenter: @escaping () -> UIViewController?
+  ) {
     self.channel = FlutterMethodChannel(name: "takeback/family_controls", binaryMessenger: messenger)
+    self.store = store
+    self.available = available ?? Self.platformAvailable
+    self.authorizationStatus = authorizationStatus
     self.presenter = presenter
     super.init()
     channel.setMethodCallHandler { [weak self] call, result in
@@ -36,7 +47,7 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
       .sink { [weak self] _ in self?.authorizationChanged() }
   }
 
-  private var available: Bool {
+  private static var platformAvailable: Bool {
     #if targetEnvironment(simulator)
     return false
     #else
@@ -46,7 +57,7 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
 
   private var authorization: String {
     guard available else { return "unavailable" }
-    let status = AuthorizationCenter.shared.authorizationStatus
+    let status = authorizationStatus()
     if status == .approved { return "authorized" }
     if status == .denied { return "denied" }
     if status == .notDetermined { return "notDetermined" }
@@ -56,8 +67,11 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
 
   private func snapshot() -> [String: Any] {
     let status = authorization
-    if status != "authorized" { store.clear() }
-    let selection = status == "authorized" ? store.load() : nil
+    // Startup can report notDetermined before the system restores approval.
+    // Only an explicit denial invalidates otherwise valid persisted tokens.
+    if status == "denied" { store.clear() }
+    let savedSelection = store.load()
+    let selection = status == "authorized" ? savedSelection : nil
     return [
       "available": available,
       "authorization": status,
@@ -97,7 +111,7 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
       result(FlutterError(code: "busy", message: "Finish the current Screen Time setup action first.", details: nil))
       return
     }
-    // Clear anything left by a previously revoked authorization before reauthorizing.
+    // Clear a denied/invalid selection, retaining valid data while status is unresolved.
     _ = snapshot()
     requestingAuthorization = true
     Task { @MainActor in

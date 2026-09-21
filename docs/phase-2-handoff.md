@@ -17,9 +17,11 @@ Swift hosts Apple's picker and stores a validated, encoded app-only selection in
 and product state. Lock/unlock/toggle still delegate to the Phase 1 prototype.
 
 Authorization is checked on startup, foregrounding, picker presentation and Save.
-Native authorization changes invalidate stored selections and dismiss an open
-picker when approval is lost. Flutter receives updates while routes are open.
-Reauthorization requires a fresh selection. Cancellation preserves a valid
+Explicit denial invalidates stored selections; corrupt or unsupported stored data
+is also removed. Startup `notDetermined` and unavailable states retain valid saved
+tokens but report no usable selection until approval returns. An open picker is
+dismissed when approval is lost. Flutter receives updates while routes are open.
+Reauthorization after denial requires a fresh selection. Cancellation preserves a valid
 previous selection; a deliberately saved empty selection is distinguishable from
 no saved selection. The prototype key is never read by the native bridge.
 
@@ -54,10 +56,12 @@ See [Apple's configuration guide](https://developer.apple.com/documentation/xcod
   prototype persistence and existing navigation.
 - `flutter build ios --simulator`: passed.
 - `flutter build ios --no-codesign`: physical-device release compilation passed.
-- RunnerTests on iPhone 17 Pro simulator: 3 tests passed. Default selection is
-  app-specific; category/website/expansion validation rejects unsupported choices;
-  native empty selection restores, rejected Save preserves prior data, and clear
-  removes it. No fabricated real app tokens were used.
+- RunnerTests on iPhone 18 Pro / iOS 27 simulator: 8 tests passed. Coverage includes
+  bridge/store recreation, transient startup states, scene-activation updates,
+  explicit denial, corrupt/wrong-type/unsupported stored data, app-only validation,
+  and rejected Save preserving prior data. Persistence tests use a valid empty
+  selection and compare stored bytes; populated Apple tokens still require the
+  physical-device force-close/relaunch check. No fabricated app tokens were used.
 - Updated integration smoke test on iPhone 17 Pro simulator: passed. It uses the
   real native channel, verifies unavailable setup and complete prototype flow,
   and reloads real local preferences. It does not test real Family Controls UI.

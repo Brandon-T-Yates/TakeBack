@@ -42,7 +42,11 @@ final class AllowedAppsStore {
   }
 
   func load() -> FamilyActivitySelection? {
-    guard let data = defaults.data(forKey: Self.selectionKey) else { return nil }
+    guard defaults.object(forKey: Self.selectionKey) != nil else { return nil }
+    guard let data = defaults.data(forKey: Self.selectionKey) else {
+      clear()
+      return nil
+    }
     do {
       return try Self.applicationsOnly(JSONDecoder().decode(FamilyActivitySelection.self, from: data))
     } catch {

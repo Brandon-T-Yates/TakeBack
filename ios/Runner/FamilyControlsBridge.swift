@@ -30,7 +30,8 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
       .receive(on: RunLoop.main)
       .sink { [weak self] _ in self?.authorizationChanged() }
     #endif
-    foregroundObserver = NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+    // Scene activation also refreshes authorization after returning from Settings.
+    foregroundObserver = NotificationCenter.default.publisher(for: UIScene.didActivateNotification)
       .receive(on: RunLoop.main)
       .sink { [weak self] _ in self?.authorizationChanged() }
   }

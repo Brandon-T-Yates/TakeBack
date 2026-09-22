@@ -21,6 +21,54 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _handleLockControl() async {
     if (_promptOpen || controller.busy) return;
+    if (controller.mode == RestrictionMode.native &&
+        !controller.needsUnlock &&
+        !controller.firstNativeLockSafetyAcknowledged) {
+      _promptOpen = true;
+      try {
+        final confirmed = await showModalBottomSheet<bool>(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Before you lock in',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Unbound restricts other apps using Screen Time. If you ever '
+                    'decide to remove Unbound, unlock first so your restrictions '
+                    'can be cleared properly.',
+                  ),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    autofocus: true,
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Got it — Lock In'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        if (confirmed == true && mounted) {
+          await controller.acknowledgeSafetyAndLockIn();
+        }
+      } finally {
+        _promptOpen = false;
+      }
+      return;
+    }
     if (controller.mode != RestrictionMode.native || !controller.needsUnlock) {
       await controller.toggleLockdown();
       return;

@@ -39,6 +39,7 @@ void main() {
         PreferencesStore.disclaimerKey: true,
         PreferencesStore.onboardingKey: true,
         PreferencesStore.prototypeLockKey: true,
+        PreferencesStore.firstNativeLockSafetyAcknowledgedKey: true,
       });
     operationError = null;
     failRead = false;
@@ -235,6 +236,51 @@ void main() {
     expect(c.mode, RestrictionMode.native);
     expect(memory.values[PreferencesStore.prototypeLockKey], isTrue);
   });
+
+  testWidgets(
+    'first native lock notice cancels safely, confirms once, and stays dismissed',
+    (tester) async {
+      memory.values.remove(
+        PreferencesStore.firstNativeLockSafetyAcknowledgedKey,
+      );
+      final c = controller();
+      await tester.pumpWidget(TakeBackApp(controller: c));
+      await tester.pumpAndSettle();
+
+      await tapText(tester, 'LOCK IN');
+      expect(find.text('Before you lock in'), findsOneWidget);
+      expect(
+        find.textContaining('remove Unbound, unlock first'),
+        findsOneWidget,
+      );
+      expect(calls, isNot(contains('toggleLockdown')));
+
+      await tapText(tester, 'Cancel');
+      expect(find.text('Before you lock in'), findsNothing);
+      expect(c.locked, isFalse);
+      expect(calls, isNot(contains('toggleLockdown')));
+      expect(
+        memory.values[PreferencesStore.firstNativeLockSafetyAcknowledgedKey],
+        isNull,
+      );
+
+      await tapText(tester, 'LOCK IN');
+      await tapText(tester, 'Got it — Lock In');
+      expect(c.locked, isTrue);
+      expect(calls.where((call) => call == 'toggleLockdown'), hasLength(1));
+      expect(
+        memory.values[PreferencesStore.firstNativeLockSafetyAcknowledgedKey],
+        isTrue,
+      );
+
+      await tapText(tester, 'UNLOCK');
+      await tapText(tester, 'Unlock');
+      await tapText(tester, 'LOCK IN');
+      expect(find.text('Before you lock in'), findsNothing);
+      expect(c.locked, isTrue);
+      expect(calls.where((call) => call == 'toggleLockdown'), hasLength(2));
+    },
+  );
 
   testWidgets(
     'checking at startup keeps main screen and explicit unlock available',

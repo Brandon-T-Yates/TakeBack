@@ -42,6 +42,17 @@ class SettingsScreen extends StatelessWidget {
                         'Allowed app selections stay on your iPhone as private tokens. '
                         'Android blocking is not available yet.',
             ),
+            const SizedBox(height: 28),
+            Text(
+              'Removing Unbound?',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Unlock before deleting the app so your restrictions can be cleared properly.',
+            ),
             const Spacer(),
             const SizedBox(height: 32),
             Text(

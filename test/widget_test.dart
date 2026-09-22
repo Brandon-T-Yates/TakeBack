@@ -68,6 +68,13 @@ void main() {
     expect(find.text('A tool for your attention'), findsOneWidget);
     expect(find.text('ABOUT UNBOUND'), findsOneWidget);
     expect(find.text('Take back your time.'), findsOneWidget);
+    expect(find.text('Removing Unbound?'), findsOneWidget);
+    expect(
+      find.text(
+        'Unlock before deleting the app so your restrictions can be cleared properly.',
+      ),
+      findsOneWidget,
+    );
     expect(find.textContaining('TakeBack'), findsNothing);
     await tester.pageBack();
     await tester.pumpAndSettle();

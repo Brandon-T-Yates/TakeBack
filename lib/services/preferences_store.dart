@@ -7,6 +7,8 @@ class PreferencesStore {
   final SharedPreferencesAsync _preferences;
   static const disclaimerKey = 'takeback.disclaimerAccepted';
   static const onboardingKey = 'takeback.onboardingComplete';
+  static const firstNativeLockSafetyAcknowledgedKey =
+      'unbound.firstNativeLockSafetyAcknowledged';
 
   // Exclusively a UI simulation. Never migrate this into native restrictions.
   static const prototypeLockKey = 'takeback.prototype.lockdownEnabled';
@@ -15,12 +17,16 @@ class PreferencesStore {
       await _preferences.getBool(disclaimerKey) ?? false;
   Future<bool> get onboardingComplete async =>
       await _preferences.getBool(onboardingKey) ?? false;
+  Future<bool> get firstNativeLockSafetyAcknowledged async =>
+      await _preferences.getBool(firstNativeLockSafetyAcknowledgedKey) ?? false;
   Future<bool> get prototypeLockEnabled async =>
       await _preferences.getBool(prototypeLockKey) ?? false;
 
   Future<void> acceptDisclaimer() => _preferences.setBool(disclaimerKey, true);
   Future<void> completeOnboarding() =>
       _preferences.setBool(onboardingKey, true);
+  Future<void> acknowledgeFirstNativeLockSafety() =>
+      _preferences.setBool(firstNativeLockSafetyAcknowledgedKey, true);
   Future<void> setPrototypeLock(bool enabled) =>
       _preferences.setBool(prototypeLockKey, enabled);
 }

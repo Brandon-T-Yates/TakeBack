@@ -167,6 +167,8 @@ void main() {
     expect(controller.setup.selectionUsable, isFalse);
     await tapText(tester, 'Continue to Unbound');
     await tapText(tester, 'LOCK IN');
+    expect(find.text('Before you lock in'), findsOneWidget);
+    await tapText(tester, 'Got it — Lock In');
     expect(find.text('Prototype mode — no apps are blocked'), findsNothing);
     expect(controller.locked, isFalse);
     expect(

@@ -26,6 +26,7 @@ class TakeBackController extends ChangeNotifier {
   bool ready = false;
   bool busy = false;
   bool locked = false;
+  bool firstNativeLockSafetyAcknowledged = false;
   String? error;
   RestrictionSetupState setup = const RestrictionSetupState();
   AuthorizationStatus get authorization => setup.authorization;
@@ -45,6 +46,8 @@ class TakeBackController extends ChangeNotifier {
 
   Future<void> initialize() => _perform(() async {
     _accepted = await _preferences.disclaimerAccepted;
+    firstNativeLockSafetyAcknowledged =
+        await _preferences.firstNativeLockSafetyAcknowledged;
     final complete = await _preferences.onboardingComplete;
     step = !_accepted
         ? SetupStep.welcome
@@ -157,6 +160,17 @@ class TakeBackController extends ChangeNotifier {
       } else {
         await _restrictions.toggleLockdown();
       }
+    } finally {
+      await _readSetup();
+    }
+  });
+
+  Future<void> acknowledgeSafetyAndLockIn() => _perform(() async {
+    if (mode != RestrictionMode.native || needsUnlock) return;
+    await _preferences.acknowledgeFirstNativeLockSafety();
+    firstNativeLockSafetyAcknowledged = true;
+    try {
+      await _restrictions.toggleLockdown();
     } finally {
       await _readSetup();
     }

@@ -1,5 +1,6 @@
 import FamilyControls
 import Foundation
+import AppIntents
 import XCTest
 import SwiftUI
 @testable import Runner
@@ -7,6 +8,19 @@ import SwiftUI
 @MainActor
 final class WidgetAndSharedStateTests: XCTestCase {
   private func context() throws -> SharedTestContext { try SharedTestContext() }
+
+  @available(iOS 17.0, *)
+  func testWidgetIntentIsPublishedByRunnerAndCannotOpenIt() {
+    func requiresAppIntent<T: AppIntent>(_: T.Type) {}
+    requiresAppIntent(SetLockdownIntent.self)
+    XCTAssertFalse(SetLockdownIntent.openAppWhenRun)
+    if #available(iOS 26.0, *) {
+      XCTAssertEqual(SetLockdownIntent.supportedModes, .background)
+    }
+    if #available(iOS 27.0, *) {
+      XCTAssertEqual(SetLockdownIntent.allowedExecutionTargets, .widgetKitExtension)
+    }
+  }
 
   func testMigrationPreservesSelectionIntentAndNeverTouchesPrototype() throws {
     for locked in [false, true] {

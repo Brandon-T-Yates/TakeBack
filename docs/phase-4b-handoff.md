@@ -1,8 +1,31 @@
 # Phase 4B handoff: interactive Home Screen widget
 
-Phase 4B is implemented. **The widget is not physically validated yet.** The user
-reported Phase 3 and Phase 4A physically validated on an iPhone before this work.
-No real restrictions were applied by automated tests.
+Phase 4B is implemented. **The repaired widget controls are awaiting successful
+physical retesting.** The user reported Phase 3 and Phase 4A physically validated
+on an iPhone before this work. No real restrictions were applied by automated tests.
+
+## Post-commit widget interaction repair
+
+Initial physical testing found that tapping the configured widget's LOCK IN or
+UNLOCK control opened Runner. `SetLockdownIntent` was compiled only into the widget
+extension. [Apple's interactive-widget guidance](https://developer.apple.com/documentation/widgetkit/adding-interactivity-to-widgets-and-live-activities)
+requires the custom App Intent used by an interactive widget to belong to both the
+containing app and widget-extension targets so the system can discover and route it
+correctly. The button itself was already a real
+`Button(intent:)`; there was no `Link`, `.widgetURL`, `OpenURLIntent`, `OpenIntent`,
+or container-level URL causing the launch.
+
+The repair adds the existing intent source to Runner's Sources phase while retaining
+the widget-extension membership. It keeps `openAppWhenRun = false`, keeps background
+execution on iOS 26, and on the installed iOS 27 SDK explicitly limits execution to
+`.widgetKitExtension`. Both built products now publish `SetLockdownIntent` metadata
+with `openAppWhenRun: false`, background mode, and the WidgetKit extension target.
+No restriction, coordinator, storage, synchronization, or UI code changed.
+
+Automated tests and metadata inspection establish the intended background/widget
+execution configuration, but they cannot prove that SpringBoard stays visible.
+Reinstall the updated build (and remove/re-add the widget if iOS retains its prior
+intent registration) and repeat the focused physical checks at the end of this file.
 
 ## User experience
 
@@ -128,13 +151,14 @@ Completed September 22, 2026 with the installed Flutter 3.47.5 / Xcode 27 toolch
 | --- | --- |
 | `flutter analyze --no-pub` | No issues |
 | `flutter test --no-pub` | All 19 passed |
-| Runner native tests on iOS 27 simulator | All 34 passed |
+| Runner native tests on iOS 27 simulator | All 35 passed, including containing-app intent publication and non-opening execution configuration |
 | `flutter build ios --simulator --no-pub` | Passed; widget embedded |
 | Standalone UnboundWidgetExtension simulator build | Passed; no Flutter linkage |
 | Existing `integration_test/phase_one_test.dart` simulator smoke test | Passed |
 | `flutter build ios --no-codesign --no-pub` | Passed; device release includes widget |
 | Simulator and device built manifests | Runner 16.0, widget 17.0; expected bundle IDs and matching versions |
 | Both targets, all configurations | Existing signing team; correct Family Controls and shared App Group entitlements |
+| Built App Intent metadata | Runner and widget both publish `SetLockdownIntent` with `openAppWhenRun: false`, background mode, and WidgetKit-extension execution target |
 | Preservation review | Existing Runner build settings, SwiftPM references, scheme/pre-action, UIScene, native picker UI, Dart dependencies, prototype service and preference keys unchanged |
 | `git diff --check` | Passed |
 
@@ -203,7 +227,25 @@ installation without uninstalling it. Use an iPhone on iOS 17 or newer.
     widget actions. None may bypass validation, falsely claim locking, or silently
     switch to prototype behavior.
 
+### Focused retest after the interaction repair
+
+1. Install the repaired build. If taps still use cached behavior, remove and re-add
+   the widget once so iOS reloads its App Intent registration.
+2. From the configured unlocked widget, tap LOCK IN. Confirm the Home Screen remains
+   visible, restrictions apply, and the widget reaches verified UNLOCK state.
+3. Tap widget UNLOCK. Confirm the Home Screen remains visible, restrictions clear
+   immediately, and no in-app reflection prompt appears.
+4. Exercise the checking/error presentation and confirm its direct UNLOCK recovery
+   also stays on the Home Screen.
+5. Exercise the setup/migration presentation and confirm **Open Unbound** remains the
+   only widget state that intentionally launches the containing app.
+6. Open Unbound and confirm in-app UNLOCK still presents the Phase 4A reflection
+   prompt.
+
 ## Changed files and scope
+
+The post-commit interaction repair changed only the Xcode project target membership,
+`SetLockdownIntent.swift`, its focused native test, and this handoff document.
 
 The complete working-tree inventory below includes the existing uncommitted
 Phase 4A changes; those were preserved, not reset or reimplemented.

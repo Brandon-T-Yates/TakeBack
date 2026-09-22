@@ -8,6 +8,8 @@ struct SetLockdownIntent: AppIntent {
   static var openAppWhenRun: Bool = false
   @available(iOS 26.0, *)
   static var supportedModes: IntentModes { .background }
+  @available(iOS 27.0, *)
+  static var allowedExecutionTargets: IntentExecutionTargets { .widgetKitExtension }
 
   @Parameter(title: "Enable restrictions") var enabled: Bool
   init() {}

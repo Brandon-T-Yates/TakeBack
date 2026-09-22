@@ -35,6 +35,7 @@
 		FA2100000000000000000001 /* AllowedAppsPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2000000000000000000001 /* AllowedAppsPicker.swift */; };
 		FA2100000000000000000002 /* AllowedAppsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2000000000000000000002 /* AllowedAppsStore.swift */; };
 		FA3100000000000000000000 /* TakeBackRestrictionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3000000000000000000000 /* TakeBackRestrictionStore.swift */; };
+		FB4B00000000000000000001 /* SetLockdownIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D3F049EF877F574EB48619 /* SetLockdownIntent.swift */; };
 		FD067B44A0611D94A5090864 /* WidgetAndSharedStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7677C3203E589DB06B645568 /* WidgetAndSharedStateTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -546,6 +547,7 @@
 				494282E6316F22DB07C00AF8 /* NativeRestrictionCoordinator.swift in Sources */,
 				65BED30BA6EC927BC19EFF73 /* WidgetRestrictionState.swift in Sources */,
 				651048538C1B063BC0B881FA /* WidgetControlLabel.swift in Sources */,
+				FB4B00000000000000000001 /* SetLockdownIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

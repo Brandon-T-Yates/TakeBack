@@ -14,6 +14,9 @@ class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final locked = controller.locked;
+    final native = controller.mode == RestrictionMode.native;
+    final status = controller.lockdownState;
+    final needsUnlock = controller.needsUnlock;
     return Scaffold(
       bottomNavigationBar: controller.mode == RestrictionMode.prototype
           ? const SafeArea(
@@ -66,7 +69,12 @@ class MainScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        locked ? 'LOCKED IN' : 'UNLOCKED',
+                        switch (status) {
+                          LockdownState.locked => 'LOCKED IN',
+                          LockdownState.unlocked => 'UNLOCKED',
+                          LockdownState.checking => 'CHECKING',
+                          LockdownState.error => 'STATE UNCONFIRMED',
+                        },
                         style: const TextStyle(
                           fontSize: 12,
                           letterSpacing: 1.8,
@@ -89,8 +97,14 @@ class MainScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              locked
-                  ? 'Your prototype session is active.'
+              status == LockdownState.checking
+                  ? 'Checking Screen Time authorization. You can still unlock.'
+                  : status == LockdownState.error
+                  ? 'You can still clear TakeBack’s restrictions.'
+                  : locked
+                  ? native
+                        ? 'Your app restriction policy is active.'
+                        : 'Your prototype session is active.'
                   : 'A little intention goes a long way.',
               textAlign: TextAlign.center,
             ),
@@ -115,14 +129,14 @@ class MainScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        locked
+                        needsUnlock
                             ? Icons.lock_open_rounded
                             : Icons.north_west_rounded,
                         size: 42,
                       ),
                       const SizedBox(height: 22),
                       Text(
-                        locked ? 'UNLOCK' : 'LOCK IN',
+                        needsUnlock ? 'UNLOCK' : 'LOCK IN',
                         style: const TextStyle(
                           fontSize: 25,
                           fontWeight: FontWeight.w600,
@@ -146,7 +160,12 @@ class MainScreen extends StatelessWidget {
             ),
             const SizedBox(height: 28),
             const Spacer(),
-            ErrorNotice(controller.error),
+            ErrorNotice(
+              controller.error ??
+                  (status == LockdownState.error
+                      ? controller.setup.restrictionMessage
+                      : null),
+            ),
           ],
         ),
       ),

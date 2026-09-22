@@ -11,8 +11,8 @@ struct AllowedAppsPicker: View {
     NavigationStack {
       VStack(spacing: 0) {
         FamilyActivityPicker(
-          headerText: "Choose individual apps to ALLOW during a future lock session.",
-          footerText: "Categories and websites are not supported. Expand a category to select individual apps. No apps are blocked yet.",
+          headerText: "Choose individual apps to keep accessible while locked in.",
+          footerText: "Choose 1–50 apps before locking in. Categories and websites are not supported. Expand categories to select individual apps.",
           selection: $selection
         )
         if let message = validationMessage {

@@ -4,7 +4,7 @@ import Flutter
 import SwiftUI
 import UIKit
 
-/// Native responsibilities only: authorization, picker presentation and tokens.
+/// Native authorization, picker, token storage, and restriction service boundary.
 @MainActor
 final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDelegate {
   private let channel: FlutterMethodChannel
@@ -12,6 +12,7 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
   private let store: AllowedAppsStore
   private let available: Bool
   private let authorizationStatus: () -> AuthorizationStatus
+  private let restrictions: (any RestrictionControlling)?
   private var authorizationObserver: AnyCancellable?
   private var foregroundObserver: AnyCancellable?
   private var pickerController: UIViewController?
@@ -23,12 +24,18 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     store: AllowedAppsStore = AllowedAppsStore(),
     available: Bool? = nil,
     authorizationStatus: @escaping () -> AuthorizationStatus = { AuthorizationCenter.shared.authorizationStatus },
+    restrictions: (any RestrictionControlling)? = nil,
     presenter: @escaping () -> UIViewController?
   ) {
     self.channel = FlutterMethodChannel(name: "takeback/family_controls", binaryMessenger: messenger)
     self.store = store
     self.available = available ?? Self.platformAvailable
     self.authorizationStatus = authorizationStatus
+    #if targetEnvironment(simulator)
+    self.restrictions = restrictions
+    #else
+    self.restrictions = restrictions ?? TakeBackRestrictionStore(selectionStore: store)
+    #endif
     self.presenter = presenter
     super.init()
     channel.setMethodCallHandler { [weak self] call, result in
@@ -39,7 +46,10 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     authorizationObserver = AuthorizationCenter.shared.$authorizationStatus
       .removeDuplicates()
       .receive(on: RunLoop.main)
-      .sink { [weak self] _ in self?.authorizationChanged() }
+      .sink { [weak self] status in
+        // Do not lose a definite denial if a later status arrives before delivery.
+        self?.authorizationChanged(denied: status == .denied)
+      }
     #endif
     // Scene activation also refreshes authorization after returning from Settings.
     foregroundObserver = NotificationCenter.default.publisher(for: UIScene.didActivateNotification)
@@ -65,25 +75,30 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     return "unavailable"
   }
 
-  private func snapshot() -> [String: Any] {
-    let status = authorization
+  private func snapshot(denied: Bool = false) -> [String: Any] {
+    let status = denied ? "denied" : authorization
     // Startup can report notDetermined before the system restores approval.
     // Only an explicit denial invalidates otherwise valid persisted tokens.
     if status == "denied" { store.clear() }
     let savedSelection = store.load()
     let selection = status == "authorized" ? savedSelection : nil
-    return [
+    let restriction = restrictions?.reconcile(authorization: status) ?? RestrictionSnapshot(state: .unlocked)
+    var state: [String: Any] = [
       "available": available,
       "authorization": status,
       "hasSavedSelection": selection != nil,
       "applicationCount": selection?.applicationTokens.count ?? 0,
       "selectionUsable": status == "authorized" && selection != nil,
+      "restrictionMode": restrictions == nil ? "prototype" : "native",
+      "lockdownState": restriction.state.rawValue,
     ]
+    if let message = restriction.message { state["restrictionMessage"] = message }
+    return state
   }
 
-  private func authorizationChanged() {
-    let state = snapshot()
-    if authorization != "authorized", pickerResult != nil {
+  private func authorizationChanged(denied: Bool = false) {
+    let state = snapshot(denied: denied)
+    if state["authorization"] as? String != "authorized", pickerResult != nil {
       finishPicker(FlutterError(
         code: "authorization_revoked",
         message: "Screen Time access is no longer authorized. Authorize again and reselect your allowed apps.",
@@ -98,7 +113,43 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     case "getSetupState": result(snapshot())
     case "requestAuthorization": requestAuthorization(result)
     case "selectAllowedApps": presentPicker(result)
+    case "enableLockdown", "disableLockdown", "toggleLockdown", "isLockdownEnabled":
+      handleRestriction(call.method, result: result)
     default: result(FlutterMethodNotImplemented)
+    }
+  }
+
+  private func handleRestriction(_ method: String, result: @escaping FlutterResult) {
+    guard let restrictions else {
+      result(FlutterError(code: "unavailable", message: "Real app restrictions require a supported physical iPhone.", details: nil))
+      return
+    }
+    defer { channel.invokeMethod("setupChanged", arguments: snapshot()) }
+    do {
+      let state = snapshot()["lockdownState"] as? String
+      switch method {
+      case "isLockdownEnabled":
+        guard state == "locked" || state == "unlocked" else {
+          throw RestrictionFailure(code: "restriction_state_unknown", message: "Restriction state is unresolved. You can still unlock.")
+        }
+        result(state == "locked")
+        return
+      case "disableLockdown": try restrictions.disable()
+      case "toggleLockdown" where state != "unlocked": try restrictions.disable()
+      default:
+        guard !requestingAuthorization, pickerResult == nil else {
+          throw RestrictionFailure(code: "busy", message: "Finish the current Screen Time setup action before locking in.")
+        }
+        guard available else {
+          throw RestrictionFailure(code: "unavailable", message: "Screen Time restrictions are unavailable on this device.")
+        }
+        try restrictions.enable(authorization: authorization)
+      }
+      result(snapshot())
+    } catch let failure as RestrictionFailure {
+      result(FlutterError(code: failure.code, message: failure.message, details: nil))
+    } catch {
+      result(FlutterError(code: "restriction_failed", message: "Could not confirm TakeBack’s restrictions. Try UNLOCK to clear them.", details: nil))
     }
   }
 
@@ -124,9 +175,9 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
         authorizationChanged()
         if let familyError = error as? FamilyControlsError,
            familyError == .authorizationCanceled {
-          result(FlutterError(code: "authorization_cancelled", message: "Authorization was cancelled. Try again or continue in prototype mode.", details: nil))
+          result(FlutterError(code: "authorization_cancelled", message: "Authorization was cancelled. Authorize Screen Time before locking in.", details: nil))
         } else if authorization == "denied" {
-          result(FlutterError(code: "authorization_denied", message: "Screen Time access was denied. You can retry authorization or continue in prototype mode.", details: nil))
+          result(FlutterError(code: "authorization_denied", message: "Screen Time access was denied. Authorize Screen Time before locking in.", details: nil))
         } else {
           result(FlutterError(code: "authorization_failed", message: "Screen Time authorization failed: \(error.localizedDescription) Check Family Controls capability and development provisioning in Xcode.", details: nil))
         }
@@ -135,8 +186,12 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
   }
 
   private func presentPicker(_ result: @escaping FlutterResult) {
-    _ = snapshot()
+    let state = snapshot()
     guard available else { result("unavailable"); return }
+    guard state["lockdownState"] as? String == "unlocked" else {
+      result(FlutterError(code: "unlock_required", message: "Unlock TakeBack before changing your allowed apps.", details: nil))
+      return
+    }
     guard authorization == "authorized" else {
       result(FlutterError(code: "authorization_required", message: "Authorize Screen Time before choosing allowed apps.", details: nil))
       return

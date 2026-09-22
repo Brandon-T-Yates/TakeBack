@@ -13,6 +13,7 @@ class PermissionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
     final available = controller.setup.available;
+    final native = controller.mode == RestrictionMode.native;
     final authorized =
         controller.authorization == AuthorizationStatus.authorized;
     return Scaffold(
@@ -33,7 +34,9 @@ class PermissionScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               isIOS
-                  ? 'Authorize Screen Time to choose the apps you want to allow in a future lock session.'
+                  ? native
+                        ? 'Authorize Screen Time to choose the apps that remain accessible while locked in.'
+                        : 'Authorize Screen Time to choose the apps you want to allow in a future lock session.'
                   : 'TakeBack will need device permissions to restrict apps. '
                         'Android blocking will follow the iOS implementation.',
               style: Theme.of(context).textTheme.bodyLarge,
@@ -43,6 +46,8 @@ class PermissionScreen extends StatelessWidget {
               !isIOS
                   ? 'Permission setup is coming in a future version. Continuing '
                         'does not request or grant any device permissions.'
+                  : native
+                  ? 'LOCK IN requires Screen Time approval and 1–50 saved allowed apps. UNLOCK clears TakeBack’s restrictions.'
                   : !available
                   ? 'Screen Time setup requires a provisioned physical iPhone. '
                         'It is unavailable in the simulator. You can continue in prototype mode.'
@@ -55,7 +60,7 @@ class PermissionScreen extends StatelessWidget {
             ],
             const SizedBox(height: 36),
             const Spacer(),
-            const PrototypeNotice(),
+            if (!native) const PrototypeNotice(),
             const SizedBox(height: 20),
             ErrorNotice(controller.error),
             if (available && !authorized) ...[
@@ -66,13 +71,15 @@ class PermissionScreen extends StatelessWidget {
               const SizedBox(height: 8),
               TextButton(
                 onPressed: controller.busy ? null : controller.continueSetup,
-                child: const Text('Continue in Prototype'),
+                child: Text(
+                  native ? 'Continue without locking' : 'Continue in Prototype',
+                ),
               ),
             ] else
               FilledButton(
                 onPressed: controller.busy ? null : controller.continueSetup,
                 child: Text(
-                  isIOS && !available ? 'Continue in Prototype' : 'Continue',
+                  isIOS && !native ? 'Continue in Prototype' : 'Continue',
                 ),
               ),
           ],

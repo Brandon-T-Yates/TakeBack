@@ -63,29 +63,36 @@ class ErrorNotice extends StatelessWidget {
 }
 
 class DisclaimerText extends StatelessWidget {
-  const DisclaimerText({super.key});
+  const DisclaimerText({super.key, this.nativeMode = false});
+  final bool nativeMode;
   @override
-  Widget build(BuildContext context) => const Column(
+  Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _DisclaimerItem(
+      const _DisclaimerItem(
         'A tool for your attention',
         'TakeBack is a focus and productivity tool. It is not a security tool '
             'or a parental-control guarantee.',
       ),
-      SizedBox(height: 24),
-      _DisclaimerItem(
+      const SizedBox(height: 24),
+      const _DisclaimerItem(
         'Your device sets the limits',
         'App restrictions require operating-system permissions. Certain '
             'system apps and emergency functions may remain accessible. '
             'Platform limitations affect what can be restricted.',
       ),
-      SizedBox(height: 24),
+      const SizedBox(height: 24),
       _DisclaimerItem(
-        'This is an early prototype',
-        'Screen Time authorization and app selection are available on supported '
-            'iPhones. LOCK IN only changes the state inside TakeBack; other apps '
-            'remain accessible. Android setup is not available yet.',
+        nativeMode
+            ? 'You choose what stays accessible'
+            : 'This is an early prototype',
+        nativeMode
+            ? 'On supported iPhones, LOCK IN applies Apple’s app shields except for '
+                  'your 1–50 allowed apps. UNLOCK clears TakeBack’s restrictions. '
+                  'Other Screen Time restrictions may still apply.'
+            : 'Screen Time authorization and app selection are available on supported '
+                  'iPhones. LOCK IN only changes the state inside TakeBack; other apps '
+                  'remain accessible. Android setup is not available yet.',
       ),
     ],
   );

@@ -15,7 +15,7 @@ class TakeBackController extends ChangeNotifier {
   }) : _preferences = preferences,
        _restrictions = restrictions {
     _subscription = restrictions.setupChanges.listen((state) {
-      setup = state;
+      _applySetup(state);
       if (!_disposed) notifyListeners();
     });
   }
@@ -36,18 +36,27 @@ class TakeBackController extends ChangeNotifier {
   late final StreamSubscription<RestrictionSetupState> _subscription;
 
   RestrictionMode get mode => _restrictions.mode;
+  LockdownState get lockdownState => mode == RestrictionMode.prototype
+      ? (locked ? LockdownState.locked : LockdownState.unlocked)
+      : setup.lockdownState;
+  bool get needsUnlock => lockdownState != LockdownState.unlocked;
+  bool get canEditAllowedApps =>
+      mode == RestrictionMode.prototype || !needsUnlock;
 
   Future<void> initialize() => _perform(() async {
     _accepted = await _preferences.disclaimerAccepted;
     final complete = await _preferences.onboardingComplete;
-    locked = await _restrictions.isLockdownEnabled();
-    await _readSetup();
     step = !_accepted
         ? SetupStep.welcome
         : complete
         ? SetupStep.complete
         : SetupStep.permission;
-    ready = true;
+    try {
+      await _readSetup();
+    } finally {
+      // Native state failures must not hide the main screen's UNLOCK recovery.
+      ready = true;
+    }
   });
 
   void getStarted() {
@@ -74,6 +83,12 @@ class TakeBackController extends ChangeNotifier {
   });
 
   Future<void> chooseAllowedApps() => _perform(() async {
+    if (!canEditAllowedApps) {
+      throw PlatformException(
+        code: 'unlock_required',
+        message: 'Unlock TakeBack before changing your allowed apps.',
+      );
+    }
     try {
       selection = await _restrictions.selectAllowedApps();
     } finally {
@@ -82,7 +97,31 @@ class TakeBackController extends ChangeNotifier {
   });
 
   Future<void> _readSetup() async {
-    setup = await _restrictions.getSetupState();
+    try {
+      _applySetup(await _restrictions.getSetupState());
+      if (mode == RestrictionMode.prototype) {
+        locked = await _restrictions.isLockdownEnabled();
+      }
+    } catch (_) {
+      if (mode == RestrictionMode.native) {
+        _applySetup(
+          const RestrictionSetupState(
+            mode: RestrictionMode.native,
+            lockdownState: LockdownState.error,
+            restrictionMessage:
+                'Could not confirm TakeBack’s restrictions. Tap UNLOCK to retry clearing them.',
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  void _applySetup(RestrictionSetupState state) {
+    setup = state;
+    if (mode == RestrictionMode.native) {
+      locked = state.lockdownState == LockdownState.locked;
+    }
   }
 
   Future<void> refreshSetup() async {
@@ -103,8 +142,16 @@ class TakeBackController extends ChangeNotifier {
   });
 
   Future<void> toggleLockdown() => _perform(() async {
-    await _restrictions.toggleLockdown();
-    locked = await _restrictions.isLockdownEnabled();
+    try {
+      if (mode == RestrictionMode.native && needsUnlock) {
+        // A displayed UNLOCK must never re-enable a policy that was just cleared.
+        await _restrictions.disableLockdown();
+      } else {
+        await _restrictions.toggleLockdown();
+      }
+    } finally {
+      await _readSetup();
+    }
   });
 
   Future<void> _perform(Future<void> Function() action) async {

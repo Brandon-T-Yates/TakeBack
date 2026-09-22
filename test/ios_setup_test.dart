@@ -26,6 +26,8 @@ void main() {
       'hasSavedSelection': false,
       'applicationCount': 0,
       'selectionUsable': false,
+      'restrictionMode': 'native',
+      'lockdownState': 'unlocked',
     };
     pickerResult = 'selected';
     authorizationError = null;
@@ -47,6 +49,11 @@ void main() {
                 });
               }
               return pickerResult;
+            case 'toggleLockdown':
+              throw PlatformException(
+                code: 'authorization_required',
+                message: 'Authorize Screen Time before locking in.',
+              );
             default:
               throw MissingPluginException();
           }
@@ -86,7 +93,7 @@ void main() {
   });
 
   test(
-    'cancelled authorization allows prototype and never changes its state',
+    'cancelled authorization never activates native or prototype restrictions',
     () async {
       final memory = MemoryPreferences()
         ..values.addAll({
@@ -103,8 +110,9 @@ void main() {
       await controller.authorize();
       expect(controller.error, contains('cancelled'));
       expect(controller.authorization, AuthorizationStatus.notDetermined);
-      expect(controller.locked, isTrue);
-      expect(controller.mode, RestrictionMode.prototype);
+      expect(controller.locked, isFalse);
+      expect(controller.mode, RestrictionMode.native);
+      expect(memory.values[PreferencesStore.prototypeLockKey], isTrue);
       await controller.continueSetup();
       await controller.finishOnboarding();
       expect(controller.step, SetupStep.complete);
@@ -112,57 +120,59 @@ void main() {
     },
   );
 
-  testWidgets(
-    'iOS authorization, picker outcomes, restore and revocation',
-    (tester) async {
-      final memory = MemoryPreferences()
-        ..values[PreferencesStore.disclaimerKey] = true;
-      final controller = controllerFor(memory);
-      await tester.pumpWidget(TakeBackApp(controller: controller));
-      await tester.pumpAndSettle();
-      await tapText(tester, 'Authorize Screen Time');
-      expect(find.text('Screen Time access is authorized.'), findsOneWidget);
-      await tapText(tester, 'Continue');
-      await tapText(tester, 'Choose Allowed Apps');
-      expect(find.text('2 allowed apps saved'), findsOneWidget);
-      pickerResult = 'cancelled';
-      await tapText(tester, 'Choose Allowed Apps');
-      expect(find.text('2 allowed apps saved'), findsOneWidget);
-      expect(controller.selection, AppSelectionResult.cancelled);
+  testWidgets('iOS authorization, picker outcomes, restore and revocation', (
+    tester,
+  ) async {
+    final memory = MemoryPreferences()
+      ..values[PreferencesStore.disclaimerKey] = true;
+    final controller = controllerFor(memory);
+    await tester.pumpWidget(TakeBackApp(controller: controller));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Authorize Screen Time');
+    expect(find.text('Screen Time access is authorized.'), findsOneWidget);
+    await tapText(tester, 'Continue');
+    await tapText(tester, 'Choose Allowed Apps');
+    expect(find.text('2 allowed apps saved'), findsOneWidget);
+    pickerResult = 'cancelled';
+    await tapText(tester, 'Choose Allowed Apps');
+    expect(find.text('2 allowed apps saved'), findsOneWidget);
+    expect(controller.selection, AppSelectionResult.cancelled);
 
-      // Reload metadata from native storage rather than Flutter preferences.
-      controller.setup = const RestrictionSetupState();
-      await tester.runAsync(controller.refreshSetup);
-      await tester.pumpAndSettle();
-      expect(controller.setup.applicationCount, 2);
-      expect(memory.values.containsKey('applicationTokens'), isFalse);
+    // Reload metadata from native storage rather than Flutter preferences.
+    controller.setup = const RestrictionSetupState();
+    await tester.runAsync(controller.refreshSetup);
+    await tester.pumpAndSettle();
+    expect(controller.setup.applicationCount, 2);
+    expect(memory.values.containsKey('applicationTokens'), isFalse);
 
-      // Simulate the native authorization-change notification while a route is open.
-      state.addAll({
-        'authorization': 'denied',
-        'hasSavedSelection': false,
-        'applicationCount': 0,
-        'selectionUsable': false,
-      });
-      final delivered = Completer<void>();
-      tester.binding.channelBuffers.push(
-        channel.name,
-        const StandardMethodCodec().encodeMethodCall(
-          MethodCall('setupChanged', state),
-        ),
-        (_) => delivered.complete(),
-      );
-      await tester.runAsync(() => delivered.future);
-      await tester.pumpAndSettle();
-      expect(find.text('No usable app selection saved'), findsOneWidget);
-      expect(find.text('Authorize Screen Time'), findsOneWidget);
-      expect(controller.setup.selectionUsable, isFalse);
-      await tapText(tester, 'Continue to TakeBack');
-      await tapText(tester, 'LOCK IN');
-      expect(find.text('Prototype mode — no apps are blocked'), findsOneWidget);
-      expect(controller.locked, isTrue);
-      expect(tester.takeException(), isNull);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+    // Simulate the native authorization-change notification while a route is open.
+    state.addAll({
+      'authorization': 'denied',
+      'hasSavedSelection': false,
+      'applicationCount': 0,
+      'selectionUsable': false,
+    });
+    final delivered = Completer<void>();
+    tester.binding.channelBuffers.push(
+      channel.name,
+      const StandardMethodCodec().encodeMethodCall(
+        MethodCall('setupChanged', state),
+      ),
+      (_) => delivered.complete(),
+    );
+    await tester.runAsync(() => delivered.future);
+    await tester.pumpAndSettle();
+    expect(find.text('No usable app selection saved'), findsOneWidget);
+    expect(find.text('Authorize Screen Time'), findsOneWidget);
+    expect(controller.setup.selectionUsable, isFalse);
+    await tapText(tester, 'Continue to TakeBack');
+    await tapText(tester, 'LOCK IN');
+    expect(find.text('Prototype mode — no apps are blocked'), findsNothing);
+    expect(controller.locked, isFalse);
+    expect(
+      find.text('Authorize Screen Time before locking in.'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 }

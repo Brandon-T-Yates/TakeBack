@@ -35,7 +35,9 @@ class AllowedAppsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Choose individual apps to ALLOW during a future lock session. No apps are blocked yet.',
+              controller.mode == RestrictionMode.native
+                  ? 'Choose 1–50 individual apps to keep accessible while locked in. Unlock before changing your allowed apps.'
+                  : 'Choose individual apps to ALLOW during a future lock session. No apps are blocked yet.',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const Spacer(),
@@ -83,15 +85,18 @@ class AllowedAppsScreen extends StatelessWidget {
                     AuthorizationSummary(controller.authorization),
                     const SizedBox(height: 16),
                     FilledButton(
-                      onPressed: controller.busy
+                      onPressed:
+                          controller.busy || !controller.canEditAllowedApps
                           ? null
                           : controller.authorization ==
                                 AuthorizationStatus.authorized
                           ? controller.chooseAllowedApps
                           : controller.authorize,
                       child: Text(
-                        controller.authorization ==
-                                AuthorizationStatus.authorized
+                        !controller.canEditAllowedApps
+                            ? 'Unlock before editing apps'
+                            : controller.authorization ==
+                                  AuthorizationStatus.authorized
                             ? 'Choose Allowed Apps'
                             : 'Authorize Screen Time',
                       ),
@@ -102,7 +107,8 @@ class AllowedAppsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             const Spacer(),
-            const PrototypeNotice(),
+            if (controller.mode == RestrictionMode.prototype)
+              const PrototypeNotice(),
             const SizedBox(height: 20),
             ErrorNotice(controller.error),
             FilledButton(

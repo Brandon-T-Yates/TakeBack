@@ -209,3 +209,280 @@ private final class TestBinaryMessenger: NSObject, FlutterBinaryMessenger {
 
   func cleanUpConnection(_ connection: FlutterBinaryMessengerConnection) { handler = nil }
 }
+
+@MainActor
+final class RestrictionPolicyTests: XCTestCase {
+  func testActivationRequiresAuthorizationAndValidNonemptyBoundedSelection() throws {
+    let c = try RestrictionTestContext()
+    defer { c.cleanUp() }
+    for status in ["notDetermined", "denied", "unavailable"] {
+      XCTAssertThrowsError(try c.policy.enable(authorization: status))
+    }
+    c.selection = nil
+    XCTAssertThrowsError(try c.policy.enable(authorization: "authorized"))
+    c.selection = []
+    XCTAssertThrowsError(try c.policy.enable(authorization: "authorized")) { error in
+      XCTAssertEqual((error as? RestrictionFailure)?.code, "empty_selection")
+    }
+    c.selection = Set((0...50).map(String.init))
+    XCTAssertThrowsError(try c.policy.enable(authorization: "authorized"))
+    XCTAssertEqual(c.backend.applyCount, 0)
+    XCTAssertFalse(c.intent)
+    c.selection = Set((0..<50).map(String.init))
+    try c.policy.enable(authorization: "authorized")
+    XCTAssertEqual(c.backend.policy, .allowlist(c.selection!, active: true))
+  }
+
+  func testEnableAndDisableAreIdempotentAndOnlyUseNativeIntent() throws {
+    let c = try RestrictionTestContext()
+    defer { c.cleanUp() }
+    c.defaults.set(true, forKey: "takeback.prototype.lockdownEnabled")
+    XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .unlocked)
+    XCTAssertEqual(c.backend.applyCount, 0)
+    try c.policy.enable(authorization: "authorized")
+    try c.policy.enable(authorization: "authorized")
+    XCTAssertEqual(c.backend.applyCount, 1)
+    XCTAssertTrue(c.intent)
+    XCTAssertEqual(c.backend.policy, .allowlist(["allowed-a", "allowed-b"], active: true))
+    XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .locked)
+    try c.policy.disable()
+    try c.policy.disable()
+    XCTAssertEqual(c.backend.policy, .clear)
+    XCTAssertFalse(c.intent)
+    XCTAssertTrue(c.defaults.bool(forKey: "takeback.prototype.lockdownEnabled"))
+  }
+
+  func testRelaunchReadsExistingPolicyWithoutReapplying() throws {
+    let c = try RestrictionTestContext()
+    defer { c.cleanUp() }
+    try c.policy.enable(authorization: "authorized")
+    let relaunched = c.makePolicy()
+    XCTAssertEqual(relaunched.reconcile(authorization: "authorized").state, .locked)
+    XCTAssertEqual(c.backend.applyCount, 1)
+    c.backend.policy = .clear
+    XCTAssertEqual(relaunched.reconcile(authorization: "authorized").state, .unlocked)
+    XCTAssertFalse(c.intent)
+    XCTAssertEqual(c.backend.applyCount, 1)
+  }
+
+  func testUnresolvedAuthorizationPreservesPolicyButDenialClearsIt() throws {
+    let c = try RestrictionTestContext()
+    defer { c.cleanUp() }
+    try c.policy.enable(authorization: "authorized")
+    for authorization in ["notDetermined", "unavailable"] {
+      XCTAssertEqual(c.policy.reconcile(authorization: authorization).state, .checking)
+      XCTAssertTrue(c.intent)
+      XCTAssertEqual(c.backend.policy, .allowlist(c.selection!, active: true))
+      XCTAssertThrowsError(try c.policy.enable(authorization: authorization))
+    }
+    XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .locked)
+    XCTAssertEqual(c.policy.reconcile(authorization: "denied").state, .unlocked)
+    XCTAssertEqual(c.backend.policy, .clear)
+    XCTAssertFalse(c.intent)
+    XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .unlocked)
+  }
+
+  func testOrphanMismatchedInvalidAndInactivePoliciesAreCleared() throws {
+    let c = try RestrictionTestContext()
+    defer { c.cleanUp() }
+    let invalidPolicies: [ShieldPolicy<String>] = [
+      .allowlist(["another-app"], active: true),
+      .allowlist(c.selection!, active: false), .unexpected,
+    ]
+    for policy in invalidPolicies {
+      c.defaults.set(true, forKey: RestrictionPolicy<FakeRestrictionBackend>.intentKey)
+      c.backend.policy = policy
+      XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .unlocked)
+      XCTAssertEqual(c.backend.policy, .clear)
+      XCTAssertFalse(c.intent)
+    }
+    c.backend.policy = .allowlist(c.selection!, active: true)
+    XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .unlocked)
+    XCTAssertEqual(c.backend.policy, .clear)
+    for invalidSelection in [nil, Set<String>()] as [Set<String>?] {
+      c.selection = ["allowed-a"]
+      try c.policy.enable(authorization: "authorized")
+      c.selection = invalidSelection
+      XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .unlocked)
+      XCTAssertEqual(c.backend.policy, .clear)
+    }
+  }
+
+  func testFailedApplyRollsBackAndFailedClearRetainsRecoveryState() throws {
+    let c = try RestrictionTestContext()
+    defer { c.cleanUp() }
+    c.backend.dropApply = true
+    XCTAssertThrowsError(try c.policy.enable(authorization: "authorized"))
+    XCTAssertEqual(c.backend.policy, .clear)
+    XCTAssertFalse(c.intent)
+    c.backend.dropApply = false
+    c.backend.throwAfterApply = true
+    XCTAssertThrowsError(try c.policy.enable(authorization: "authorized"))
+    XCTAssertEqual(c.backend.policy, .clear)
+    c.backend.throwAfterApply = false
+    try c.policy.enable(authorization: "authorized")
+    c.backend.ignoreClear = true
+    XCTAssertThrowsError(try c.policy.disable())
+    XCTAssertTrue(c.intent)
+    XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .error)
+    XCTAssertEqual(c.policy.reconcile(authorization: "denied").state, .error)
+    c.backend.failRead = true
+    XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .error)
+    XCTAssertThrowsError(try c.policy.enable(authorization: "authorized"))
+    c.backend.failRead = false
+    c.backend.ignoreClear = false
+    try c.policy.disable()
+    XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .unlocked)
+    XCTAssertFalse(c.intent)
+  }
+
+  func testFailedPartialApplyAndCleanupCannotClaimUnlocked() throws {
+    let c = try RestrictionTestContext()
+    defer { c.cleanUp() }
+    c.backend.throwAfterApply = true
+    c.backend.ignoreClear = true
+    XCTAssertThrowsError(try c.policy.enable(authorization: "authorized")) { error in
+      XCTAssertEqual((error as? RestrictionFailure)?.code, "restriction_clear_failed")
+    }
+    XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .error)
+    c.backend.ignoreClear = false
+    try c.policy.disable()
+    XCTAssertEqual(c.backend.policy, .clear)
+  }
+
+  func testInactiveWriteCannotBeReportedAsLocked() throws {
+    let c = try RestrictionTestContext()
+    defer { c.cleanUp() }
+    c.backend.applyActive = false
+    XCTAssertThrowsError(try c.policy.enable(authorization: "authorized"))
+    XCTAssertFalse(c.intent)
+    XCTAssertEqual(c.backend.policy, .clear)
+  }
+
+  func testSceneRevocationClearsNativePolicyAndSelectionAndNotifiesFlutter() async throws {
+    let c = try RestrictionTestContext()
+    defer { c.cleanUp() }
+    let store = AllowedAppsStore(defaults: c.defaults)
+    try store.save(FamilyActivitySelection())
+    try c.policy.enable(authorization: "authorized")
+    let messenger = TestBinaryMessenger()
+    var authorization = AuthorizationStatus.approved
+    let bridge = FamilyControlsBridge(messenger: messenger, store: store, available: true,
+      authorizationStatus: { authorization }, restrictions: c.policy, presenter: { nil })
+    defer { withExtendedLifetime(bridge) {} }
+    let notification = expectation(description: "Revocation emits reconciled state")
+    messenger.onMethodCall = { call in
+      guard call.method == "setupChanged" else { return }
+      let state = call.arguments as? [String: Any]
+      XCTAssertEqual(state?["lockdownState"] as? String, "unlocked")
+      XCTAssertEqual(state?["selectionUsable"] as? Bool, false)
+      notification.fulfill()
+    }
+    authorization = .denied
+    NotificationCenter.default.post(name: UIScene.didActivateNotification, object: nil)
+    await fulfillment(of: [notification], timeout: 2)
+    XCTAssertNil(store.load())
+    XCTAssertEqual(c.backend.policy, .clear)
+    XCTAssertFalse(c.intent)
+  }
+
+  func testEnableIsRejectedWhilePickerIsOpen() throws {
+    let messenger = TestBinaryMessenger()
+    let restrictions = StubRestrictions()
+    let parent = NonPresentingViewController()
+    let bridge = FamilyControlsBridge(messenger: messenger, available: true,
+      authorizationStatus: { .approved }, restrictions: restrictions, presenter: { parent })
+    defer { withExtendedLifetime(bridge) {} }
+    let handler = try XCTUnwrap(messenger.handler)
+    let codec = FlutterStandardMethodCodec.sharedInstance()
+    handler(codec.encode(FlutterMethodCall(methodName: "selectAllowedApps", arguments: nil))) { _ in }
+    XCTAssertTrue(parent.pickerPresented)
+    var reply: Data?
+    handler(codec.encode(FlutterMethodCall(methodName: "enableLockdown", arguments: nil))) { reply = $0 }
+    XCTAssertEqual((codec.decodeEnvelope(try XCTUnwrap(reply)) as? FlutterError)?.code, "busy")
+    XCTAssertEqual(restrictions.enableCount, 0)
+  }
+
+  func testBridgeGuardsPickerAndUsesUnlockForUncertainToggle() throws {
+    let messenger = TestBinaryMessenger()
+    let restrictions = StubRestrictions()
+    let bridge = FamilyControlsBridge(messenger: messenger, available: true,
+      authorizationStatus: { .approved }, restrictions: restrictions, presenter: { nil })
+    defer { withExtendedLifetime(bridge) {} }
+    let codec = FlutterStandardMethodCodec.sharedInstance()
+    func invoke(_ method: String) throws -> Any? {
+      var reply: Data?
+      try XCTUnwrap(messenger.handler)(codec.encode(FlutterMethodCall(methodName: method, arguments: nil))) { reply = $0 }
+      return codec.decodeEnvelope(try XCTUnwrap(reply))
+    }
+    for state in [LockdownState.locked, .checking, .error] {
+      restrictions.state = state
+      let error = try invoke("selectAllowedApps") as? FlutterError
+      XCTAssertEqual(error?.code, "unlock_required")
+      restrictions.state = state
+      _ = try invoke("toggleLockdown")
+      XCTAssertEqual(restrictions.state, .unlocked)
+    }
+    XCTAssertEqual(restrictions.enableCount, 0)
+    XCTAssertEqual(restrictions.disableCount, 3)
+    restrictions.state = .checking
+    XCTAssertEqual((try invoke("isLockdownEnabled") as? FlutterError)?.code, "restriction_state_unknown")
+    restrictions.state = .locked
+    XCTAssertEqual(try invoke("isLockdownEnabled") as? Bool, true)
+  }
+}
+
+@MainActor
+private final class RestrictionTestContext {
+  let suite = "takeback.restriction.tests.\(UUID().uuidString)"
+  let backend = FakeRestrictionBackend()
+  var defaults: UserDefaults!
+  var selection: Set<String>? = ["allowed-a", "allowed-b"]
+  lazy var policy = makePolicy()
+  var intent: Bool { defaults.bool(forKey: RestrictionPolicy<FakeRestrictionBackend>.intentKey) }
+  init() throws { defaults = try XCTUnwrap(UserDefaults(suiteName: suite)) }
+  func makePolicy() -> RestrictionPolicy<FakeRestrictionBackend> {
+    RestrictionPolicy(backend: backend, defaults: defaults) { [unowned self] in self.selection }
+  }
+  func cleanUp() { defaults.removePersistentDomain(forName: suite) }
+}
+
+@MainActor
+private final class FakeRestrictionBackend: RestrictionBackend {
+  var policy: ShieldPolicy<String> = .clear
+  var applyCount = 0
+  var dropApply = false
+  var throwAfterApply = false
+  var ignoreClear = false
+  var failRead = false
+  var applyActive = true
+  func read() throws -> ShieldPolicy<String> {
+    if failRead { throw RestrictionFailure(code: "read", message: "Test read failure") }
+    return policy
+  }
+  func apply(allowing tokens: Set<String>) throws {
+    applyCount += 1
+    if !dropApply { policy = .allowlist(tokens, active: applyActive) }
+    if throwAfterApply { throw RestrictionFailure(code: "write", message: "Test partial write") }
+  }
+  func clear() throws { if !ignoreClear { policy = .clear } }
+}
+
+@MainActor
+private final class StubRestrictions: RestrictionControlling {
+  var state = LockdownState.unlocked
+  var enableCount = 0
+  var disableCount = 0
+  func reconcile(authorization: String) -> RestrictionSnapshot { RestrictionSnapshot(state: state) }
+  func enable(authorization: String) throws { enableCount += 1; state = .locked }
+  func disable() throws { disableCount += 1; state = .unlocked }
+}
+
+@MainActor
+private final class NonPresentingViewController: UIViewController {
+  var pickerPresented = false
+  override func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
+    pickerPresented = true
+    completion?()
+  }
+}

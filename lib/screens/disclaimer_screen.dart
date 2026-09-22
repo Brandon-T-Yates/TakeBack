@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../state/takeback_controller.dart';
+import '../models/restriction_status.dart';
 import '../widgets/brand.dart';
 import '../widgets/notices.dart';
 import '../widgets/page_body.dart';
@@ -26,7 +27,7 @@ class DisclaimerScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 36),
-          const DisclaimerText(),
+          DisclaimerText(nativeMode: controller.mode == RestrictionMode.native),
           const SizedBox(height: 32),
           const Spacer(),
           ErrorNotice(controller.error),

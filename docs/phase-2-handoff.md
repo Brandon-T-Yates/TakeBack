@@ -1,7 +1,10 @@
 # Phase 2 handoff
 
-Implementation is complete; physical-iPhone validation is **pending**. No
-shielding or Phase 3 code has been added. No additional packages were needed.
+Phase 2 is complete. The user reported physical-iPhone validation of authorization,
+the native picker, app-only saving, and populated selection persistence across
+force-close/relaunch. Other edge-case checks below remain regression guidance.
+This document describes the Phase 2 baseline; the current restriction behavior
+and pending physical shielding checks are in the [Phase 3 handoff](phase-3-handoff.md).
 
 ## Architecture
 
@@ -42,10 +45,10 @@ no saved selection. The prototype key is never read by the native bridge.
 6. Connect and trust an iPhone running iOS 16+, enable Developer Mode, choose it as
    the run destination, and resolve Xcode signing/provisioning errors before running.
 
-There is currently **no configured team and no connected physical iPhone**.
-A simulator or unsigned build does not establish that provisioning works. Signed
-device validation stops here until setup is complete. TestFlight/App Store
-Family Controls approval is separate; it has not been requested.
+Development signing and physical-iPhone setup have since been used successfully.
+Preserve the current project's team and bundle ID. A simulator or unsigned build
+alone does not establish provisioning. TestFlight/App Store Family Controls
+approval is separate from development provisioning.
 See [Apple's configuration guide](https://developer.apple.com/documentation/xcode/configuring-family-controls).
 
 ## Validation completed
@@ -66,7 +69,7 @@ See [Apple's configuration guide](https://developer.apple.com/documentation/xcod
   real native channel, verifies unavailable setup and complete prototype flow,
   and reloads real local preferences. It does not test real Family Controls UI.
 
-## Physical-device checks still required
+## Phase 2 physical-device regression checklist
 
 - First authorization request and approval; deny and cancel separately; confirm
   **Continue in Prototype** remains available with no false authorization state.
@@ -93,14 +96,11 @@ category, Save will reject them rather than infer an app-specific allowlist.
 If hardware testing exposes choices that cannot be reliably distinguished,
 leave those choices unsupported and report the limitation before Phase 3.
 
-## Phase 3 recommendation — not implemented
+## Phase 3 follow-up
 
-Validate ManagedSettings shielding across application categories with exceptions
-for these explicit application tokens. Check Apple's exception limits, new apps,
-system/emergency access, denied/revoked authorization, and reliable removal of
-all restrictions on UNLOCK. Use native restriction state as the source of truth;
-never activate restrictions from the Phase 1 prototype key. Proceed only after
-physical authorization/picker validation and explicit Phase 3 approval.
+Phase 3 was approved and implemented after the user reported the Phase 2 physical
+checks above. See the [Phase 3 handoff](phase-3-handoff.md) for native allowlist
+shielding, recovery semantics, and the required physical enforcement checklist.
 
 ## Files changed
 

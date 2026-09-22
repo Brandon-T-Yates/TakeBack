@@ -27,6 +27,32 @@ execution configuration, but they cannot prove that SpringBoard stays visible.
 Reinstall the updated build (and remove/re-add the widget if iOS retains its prior
 intent registration) and repeat the focused physical checks at the end of this file.
 
+## Widget authorization-state repair
+
+Physical testing then found configured widgets intermittently presenting **Open
+Unbound** or uncertain **UNLOCK**. The widget extension was reading
+`AuthorizationCenter.shared.authorizationStatus` as authoritative even though it is
+a separate process and can transiently observe `.notDetermined` while Runner remains
+approved. That unresolved value produced `.setup` while unlocked and `.checking`
+while locked.
+
+The shared state file now also stores
+`takeback.ios.verifiedAuthorization.v1 = authorized`. Runner is the only process
+allowed to establish this marker, and does so only after its live Family Controls
+status reports approval. An unresolved or unavailable Runner status leaves the
+marker intact while preserving Runner's existing live checking behavior. A widget
+whose own live status is unresolved may consume the marker, allowing a valid 1–50
+app selection to present and execute LOCK IN and a verified policy to present
+UNLOCK. The widget cannot create the marker from its own status.
+
+A definite denial in either process removes the marker, invalidates the selection,
+and runs the existing verified restriction cleanup. Fresh shared setup without the
+marker still presents **Open Unbound**. UNLOCK remains independent of authorization
+and available for recovery. The marker lives in the existing atomically replaced
+App Group file under the existing transaction lock; no preference suite, token copy,
+or second source of restriction truth was added. A versioned widget signature forces
+a timeline invalidation when Runner first records the marker for an upgraded user.
+
 ## User experience
 
 The shared Unbound header is text-only. The main control uses an open padlock with
@@ -57,9 +83,10 @@ all presentation states.
 - `UnboundWidgetExtension`: `com.tyleryates.takeback.UnboundWidget`, iOS 17.0 minimum,
   SwiftUI/WidgetKit with only `.systemSmall` support. It has a standalone build scheme,
   is embedded before Flutter's Thin Binary phase, and does not link Flutter.
-- `SetLockdownIntent(enabled:)` is extension-only, background-only, undiscoverable,
-  and has no Shortcuts provider. Its newer `supportedModes` declaration is guarded
-  by SDK availability; older supported systems use `openAppWhenRun = false`.
+- `SetLockdownIntent(enabled:)` is used only by the widget UI but compiled into both
+  targets for App Intent discovery. It is background-only, undiscoverable, and has
+  no Shortcuts provider. Its newer `supportedModes` declaration is guarded by SDK
+  availability; older supported systems use `openAppWhenRun = false`.
 - Both processes compile the same native selection/policy/backend sources. The
   existing MethodChannel and setup snapshot shape are unchanged.
 
@@ -87,6 +114,7 @@ lock, with file protection until first user authentication. It contains:
 - Existing selection key `takeback.ios.allowedApplications.v1`, with its unchanged
   encoded `FamilyActivitySelection` data.
 - Existing intent key `takeback.ios.lockdownRequested.v1`.
+- Runner-verified authorization marker `takeback.ios.verifiedAuthorization.v1`.
 - Migration marker, pending-clear recovery flag, and token-free widget snapshot
   signature used to avoid notification/reload loops.
 
@@ -151,7 +179,7 @@ Completed September 22, 2026 with the installed Flutter 3.47.5 / Xcode 27 toolch
 | --- | --- |
 | `flutter analyze --no-pub` | No issues |
 | `flutter test --no-pub` | All 19 passed |
-| Runner native tests on iOS 27 simulator | All 35 passed, including containing-app intent publication and non-opening execution configuration |
+| Runner native tests on iOS 27 simulator | All 39 passed, including containing-app intent publication, authorization fallback/revocation, and non-opening execution configuration |
 | `flutter build ios --simulator --no-pub` | Passed; widget embedded |
 | Standalone UnboundWidgetExtension simulator build | Passed; no Flutter linkage |
 | Existing `integration_test/phase_one_test.dart` simulator smoke test | Passed |
@@ -169,12 +197,17 @@ not removed or otherwise migrated in this phase.
 Logs are in `/tmp/unbound-phase4b/`: `flutter-tests.log`, `native-tests.log`,
 `simulator-build.log`, `widget-build.log`, `smoke-test.log`, and `device-build.log`.
 The final native test bundle is `RunnerTests-recovery.xcresult`.
+Authorization-repair native/widget logs are in `/tmp/unbound-auth-cache/`; the final
+native result bundle is `RunnerTests-final.xcresult`.
 
 Native tests cover atomic migration, preserved selection bytes and native intent,
 interrupted commit/deletion, failed writes, corrupt data, idempotence, non-resurrection
 of deleted selections, and prototype-key independence. They also cover shared
 app/widget state, process-lock contention, setup guards, pending-clear recovery,
 failed activation, revocation, direct recovery, and token-free notifications.
+Focused authorization tests cover verified unlocked/locked widget presentation while
+the extension reports notDetermined, transient Runner status, explicit denial,
+fresh setup without a marker, and authorization-independent widget UNLOCK.
 Existing Phase 2/3 tests continue to cover selection persistence and policy safety.
 Native SwiftUI tests render the exact widget control content for all four states.
 Policy tests use inert identifiers and fake adapters, not fabricated Apple tokens.
@@ -242,10 +275,29 @@ installation without uninstalling it. Use an iPhone on iOS 17 or newer.
 6. Open Unbound and confirm in-app UNLOCK still presents the Phase 4A reflection
    prompt.
 
+### Focused retest after the authorization-state repair
+
+1. Open the upgraded Unbound app once while Screen Time authorization is approved;
+   this lets Runner record the verified marker and reload the widget.
+2. While unlocked with a valid 1–50 app allowlist, leave Unbound and confirm the
+   widget consistently shows the open padlock and **LOCK IN**, not **Open Unbound**.
+3. Tap widget LOCK IN, remain on the Home Screen, verify shielding, and confirm the
+   widget settles on the closed padlock and **UNLOCK** without the question mark.
+4. Force-close Unbound and repeat widget UNLOCK and LOCK IN. Both must continue to
+   use the verified native policy without opening Flutter.
+5. Revoke Screen Time authorization while locked, then allow Runner or the widget to
+   reconcile. Confirm restrictions and selection are cleared safely and the widget
+   no longer treats the old verified marker as approval.
+6. Reauthorize in Unbound, save a valid selection, and confirm normal widget controls
+   return. On a fresh install before approval, confirm **Open Unbound** remains.
+
 ## Changed files and scope
 
 The post-commit interaction repair changed only the Xcode project target membership,
-`SetLockdownIntent.swift`, its focused native test, and this handoff document.
+`SetLockdownIntent.swift`, its focused native test, and this handoff document. The
+authorization-state repair additionally changes `NativePersistence.swift`,
+`NativeRestrictionCoordinator.swift`, `FamilyControlsBridge.swift`, the shared-state
+native tests, and this handoff document.
 
 The complete working-tree inventory below includes the existing uncommitted
 Phase 4A changes; those were preserved, not reset or reimplemented.

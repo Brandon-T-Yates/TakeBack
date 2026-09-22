@@ -37,6 +37,7 @@ final class SharedNativePersistence: NativePersistence {
   static let intentKey = "takeback.ios.lockdownRequested.v1"
   static let pendingClearKey = "takeback.ios.clearPending.v1"
   static let migrationKey = "takeback.ios.sharedMigration.v1"
+  static let verifiedAuthorizationKey = "takeback.ios.verifiedAuthorization.v1"
   static var storageFailure: RestrictionFailure {
     RestrictionFailure(code: "shared_storage_unavailable", message: "Could not access Unbound’s shared state. You can still retry UNLOCK.")
   }

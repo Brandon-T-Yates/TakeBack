@@ -55,6 +55,9 @@ void main() {
     );
     await tapText(tester, 'Edit Allowed Apps');
     expect(find.text('App selection is coming soon'), findsOneWidget);
+    expect(find.text('YOUR ALLOWED APPS'), findsNothing);
+    expect(find.byType(SingleChildScrollView), findsNothing);
+    expect(find.byType(Scrollable), findsNothing);
     await tapText(tester, 'Done');
     expect(find.text('UNLOCK'), findsOneWidget);
     await tapText(tester, 'UNLOCK');
@@ -69,6 +72,31 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text('LOCK IN'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('allowed apps fits a compact iPhone without scrolling', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 667);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final memory = MemoryPreferences()
+      ..values.addAll({
+        PreferencesStore.disclaimerKey: true,
+        PreferencesStore.onboardingKey: true,
+      });
+    await tester.pumpWidget(TakeBackApp(controller: makeController(memory)));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'Edit Allowed Apps');
+
+    expect(find.text('YOUR ALLOWED APPS'), findsNothing);
+    expect(find.text('Keep what matters.'), findsOneWidget);
+    expect(find.byType(SingleChildScrollView), findsNothing);
+    expect(find.byType(Scrollable), findsNothing);
+    expect(find.text('Done').hitTestable(), findsOneWidget);
+    expect(tester.getBottomRight(find.text('Done')).dy, lessThanOrEqualTo(667));
     expect(tester.takeException(), isNull);
   });
 

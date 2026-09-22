@@ -25,12 +25,14 @@ final class NativeRestrictionCoordinator: RestrictionControlling {
   private let persistence: SharedNativePersistence
   private let legacy: UserDefaults?
   private let authorizationStatus: @MainActor () -> String
+  private let recordsVerifiedAuthorization: Bool
   private let changed: () -> Void
   private let store: AllowedAppsStore
   private let restrictions: any RestrictionControlling
 
   init(persistence: SharedNativePersistence = SharedNativePersistence(), legacy: UserDefaults? = nil,
        authorization: @escaping @MainActor () -> String = NativeRestrictionCoordinator.systemAuthorization,
+       recordsVerifiedAuthorization: Bool = false,
        changed: @escaping () -> Void = NativeWidgetChanges.post,
        makeRestrictions: @MainActor (AllowedAppsStore, NativePersistence) -> any RestrictionControlling = {
          TakeBackRestrictionStore(selectionStore: $0, persistence: $1)
@@ -38,6 +40,7 @@ final class NativeRestrictionCoordinator: RestrictionControlling {
     self.persistence = persistence
     self.legacy = legacy
     self.authorizationStatus = authorization
+    self.recordsVerifiedAuthorization = recordsVerifiedAuthorization
     self.changed = changed
     self.store = AllowedAppsStore(persistence: persistence)
     self.restrictions = makeRestrictions(store, persistence)
@@ -56,13 +59,40 @@ final class NativeRestrictionCoordinator: RestrictionControlling {
     else { try persistence.requireInitialized() }
   }
 
+  /// Runner is the authority that can establish approval. The widget may consume
+  /// that verified value when its own FamilyControls process is unresolved, but it
+  /// can never establish approval by itself. A definite denial is authoritative in
+  /// either process and removes the shared approval before cleanup.
+  private func effectiveAuthorization(denied: Bool = false) throws -> String {
+    let observed = denied ? "denied" : authorizationStatus()
+    if observed == "denied" { return observed }
+    if recordsVerifiedAuthorization {
+      if observed == "authorized",
+         try persistence.object(forKey: SharedNativePersistence.verifiedAuthorizationKey) as? String != "authorized" {
+        try persistence.set("authorized", forKey: SharedNativePersistence.verifiedAuthorizationKey)
+      }
+      // Preserve Phase 2 behavior in Runner: an unresolved live result stays
+      // unresolved even though the last verified value remains on disk.
+      return observed
+    }
+    if try persistence.object(forKey: SharedNativePersistence.verifiedAuthorizationKey) as? String == "authorized" {
+      return "authorized"
+    }
+    // The extension cannot promote its process-local status into shared approval.
+    return observed == "authorized" ? "notDetermined" : observed
+  }
+
   private func readSetup(denied: Bool = false) throws -> NativeSetupSnapshot {
     try prepare()
-    let authorization = denied ? "denied" : authorizationStatus()
+    let authorization = try effectiveAuthorization(denied: denied)
     // Keep the Phase 2 invalidation rules identical in both processes.
     if authorization == "denied" {
+      let clearedAuthorization = Result {
+        try persistence.set(nil, forKey: SharedNativePersistence.verifiedAuthorizationKey)
+      }
       let clearedSelection = Result { try store.clearValidated() }
       let restriction = restrictions.reconcile(authorization: authorization)
+      try clearedAuthorization.get()
       try clearedSelection.get()
       return NativeSetupSnapshot(authorization: authorization, selection: nil, restriction: restriction)
     }
@@ -77,7 +107,9 @@ final class NativeRestrictionCoordinator: RestrictionControlling {
     do {
       return try persistence.transaction {
         let snapshot = try readSetup(denied: denied)
-        let signature = "\(snapshot.authorization):\(snapshot.restriction.state.rawValue):\(snapshot.selection?.applicationTokens.count ?? -1)"
+        let verifiedAuthorization = try persistence.object(
+          forKey: SharedNativePersistence.verifiedAuthorizationKey) as? String ?? "none"
+        let signature = "v2:\(verifiedAuthorization):\(snapshot.authorization):\(snapshot.restriction.state.rawValue):\(snapshot.selection?.applicationTokens.count ?? -1)"
         let key = "takeback.ios.widgetSnapshot.v1"
         if try persistence.object(forKey: key) as? String != signature {
           try persistence.set(signature, forKey: key)
@@ -102,8 +134,11 @@ final class NativeRestrictionCoordinator: RestrictionControlling {
     defer { withExtendedLifetime(setup) {}; changed() }
     try persistence.transaction {
       try prepare()
-      let currentAuthorization = authorizationStatus()
-      if currentAuthorization == "denied" { try store.clearValidated() }
+      let currentAuthorization = try effectiveAuthorization()
+      if currentAuthorization == "denied" {
+        try persistence.set(nil, forKey: SharedNativePersistence.verifiedAuthorizationKey)
+        try store.clearValidated()
+      }
       try restrictions.enable(authorization: currentAuthorization)
       guard try readSetup().restriction.state == .locked else {
         try restrictions.disable()

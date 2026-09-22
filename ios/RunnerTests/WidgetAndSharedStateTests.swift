@@ -100,25 +100,84 @@ final class WidgetAndSharedStateTests: XCTestCase {
     XCTAssertGreaterThan(c.notifications, 0)
   }
 
-  func testUnresolvedAuthorizationRetainsSelectionThenRevocationClearsAndNotifies() throws {
+  func testVerifiedAuthorizationLetsWidgetLockAndPresentConfirmedStatesWhenLocallyUnresolved() throws {
+    let c = try context(); defer { c.cleanUp() }
+    c.legacy.set(try JSONEncoder().encode(FamilyActivitySelection()), forKey: AllowedAppsStore.selectionKey)
+    let app = c.coordinator(migrate: true)
+    XCTAssertEqual(app.snapshot().authorization, "authorized")
+    XCTAssertEqual(try c.shared.object(forKey: SharedNativePersistence.verifiedAuthorizationKey) as? String, "authorized")
+
+    c.authorization = "notDetermined"
+    let widget = c.coordinator()
+    let unlocked = widget.snapshot()
+    XCTAssertEqual(unlocked.authorization, "authorized")
+    XCTAssertEqual(unlocked.restriction.state, .unlocked)
+    // An inert count exercises presentation without fabricating Apple tokens.
+    XCTAssertEqual(WidgetRestrictionState(state: unlocked.restriction.state,
+      authorization: unlocked.authorization, applicationCount: 1), .unlocked)
+
+    XCTAssertEqual(try WidgetLockAction.perform(enabled: true, restrictions: widget,
+      authorization: { "notDetermined" }), "locked")
+    let locked = widget.snapshot()
+    XCTAssertEqual(locked.authorization, "authorized")
+    XCTAssertEqual(locked.restriction.state, .locked)
+    XCTAssertEqual(WidgetRestrictionState(state: locked.restriction.state,
+      authorization: locked.authorization, applicationCount: 1), .locked)
+    XCTAssertNotNil(try c.shared.object(forKey: AllowedAppsStore.selectionKey))
+  }
+
+  func testTransientRunnerAuthorizationDoesNotEraseVerifiedAuthorization() throws {
+    let c = try context(); defer { c.cleanUp() }
+    let app = c.coordinator(migrate: true)
+    XCTAssertEqual(app.snapshot().authorization, "authorized")
+    for unresolved in ["notDetermined", "unavailable"] {
+      c.authorization = unresolved
+      XCTAssertEqual(app.snapshot().authorization, unresolved)
+      XCTAssertEqual(try c.shared.object(forKey: SharedNativePersistence.verifiedAuthorizationKey) as? String, "authorized")
+      XCTAssertEqual(c.coordinator().snapshot().authorization, "authorized")
+    }
+  }
+
+  func testExplicitDenialClearsVerifiedAuthorizationSelectionAndRestrictions() throws {
     let c = try context(); defer { c.cleanUp() }
     c.legacy.set(try JSONEncoder().encode(FamilyActivitySelection()), forKey: AllowedAppsStore.selectionKey)
     let app = c.coordinator(migrate: true)
     _ = app.snapshot()
     try app.enable(authorization: "authorized")
-    c.authorization = "notDetermined"
-    let widget = c.coordinator()
-    XCTAssertEqual(widget.snapshot().restriction.state, .checking)
-    XCTAssertNotNil(try c.shared.object(forKey: AllowedAppsStore.selectionKey))
-    XCTAssertThrowsError(try WidgetLockAction.perform(enabled: true, restrictions: widget, authorization: { c.authorization }))
-    c.authorization = "authorized"
-    XCTAssertEqual(widget.snapshot().restriction.state, .locked)
     c.authorization = "denied"
-    XCTAssertEqual(widget.snapshot().restriction.state, .unlocked)
+    let denied = c.coordinator().snapshot()
+    XCTAssertEqual(denied.authorization, "denied")
+    XCTAssertEqual(denied.restriction.state, .unlocked)
+    XCTAssertNil(try c.shared.object(forKey: SharedNativePersistence.verifiedAuthorizationKey))
     XCTAssertNil(try c.shared.object(forKey: AllowedAppsStore.selectionKey))
     XCTAssertNil(try c.shared.object(forKey: SharedNativePersistence.intentKey))
     XCTAssertEqual(c.backend.policy, .clear)
     XCTAssertGreaterThan(c.notifications, 1)
+  }
+
+  func testFreshSharedSetupWithoutVerifiedAuthorizationStillOpensUnbound() throws {
+    let c = try context(); defer { c.cleanUp() }
+    try c.shared.transaction { try c.shared.migrate(from: c.legacy) }
+    c.authorization = "notDetermined"
+    let snapshot = c.coordinator().snapshot()
+    XCTAssertEqual(snapshot.authorization, "notDetermined")
+    XCTAssertEqual(WidgetRestrictionState(snapshot), .setup)
+  }
+
+  func testWidgetUnlockRemainsAvailableWithoutVerifiedAuthorization() throws {
+    let c = try context(); defer { c.cleanUp() }
+    let app = c.coordinator(migrate: true)
+    _ = app.snapshot()
+    try app.enable(authorization: "authorized")
+    try c.shared.transaction {
+      try c.shared.set(nil, forKey: SharedNativePersistence.verifiedAuthorizationKey)
+    }
+    c.authorization = "notDetermined"
+    let widget = c.coordinator()
+    XCTAssertEqual(widget.snapshot().restriction.state, .checking)
+    XCTAssertEqual(try WidgetLockAction.perform(enabled: false, restrictions: widget,
+      authorization: { "notDetermined" }), "unlocked")
+    XCTAssertEqual(c.backend.policy, .clear)
   }
 
   func testPendingClearIsVisibleToAnotherProcessAndCanRecover() throws {
@@ -256,7 +315,8 @@ private final class SharedTestContext {
   init() throws { legacy = try XCTUnwrap(UserDefaults(suiteName: suite)) }
   func coordinator(migrate: Bool = false) -> NativeRestrictionCoordinator {
     NativeRestrictionCoordinator(persistence: shared, legacy: migrate ? legacy : nil,
-      authorization: { [unowned self] in self.authorization }, changed: { [unowned self] in self.notifications += 1 },
+      authorization: { [unowned self] in self.authorization }, recordsVerifiedAuthorization: migrate,
+      changed: { [unowned self] in self.notifications += 1 },
       makeRestrictions: { _, persistence in
         RestrictionPolicy(backend: self.backend, persistence: persistence) { [unowned self] in self.tokens }
       })

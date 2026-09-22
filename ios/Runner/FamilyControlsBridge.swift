@@ -38,7 +38,9 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     self.coordinator = nil
     self.restrictions = restrictions
     #else
-    let coordinator = restrictions == nil ? NativeRestrictionCoordinator(legacy: .standard) : nil
+    let coordinator = restrictions == nil
+      ? NativeRestrictionCoordinator(legacy: .standard, recordsVerifiedAuthorization: true)
+      : nil
     self.coordinator = coordinator
     self.restrictions = restrictions ?? coordinator
     #endif

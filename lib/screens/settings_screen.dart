@@ -17,10 +17,10 @@ class SettingsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const StepLabel('ABOUT TAKEBACK'),
+            const StepLabel('ABOUT UNBOUND'),
             const SizedBox(height: 20),
             Text(
-              'Take back your attention.',
+              'Take back your time.',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 32),
@@ -35,7 +35,7 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               controller.mode == RestrictionMode.native
-                  ? 'TakeBack checks its native app restriction policy when you return. '
+                  ? 'Unbound checks its native app restriction policy when you return. '
                         'Allowed app selections stay on your iPhone as private tokens. '
                         'Android blocking is not available yet.'
                   : 'Your setup and simulated lock state are saved on this device. '
@@ -46,8 +46,8 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 32),
             Text(
               controller.mode == RestrictionMode.native
-                  ? 'TakeBack · Phase 3'
-                  : 'TakeBack · Phase 2',
+                  ? 'Unbound · Phase 3'
+                  : 'Unbound · Phase 2',
               style: const TextStyle(fontSize: 13),
             ),
           ],

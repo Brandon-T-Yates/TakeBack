@@ -23,7 +23,7 @@ class DisclaimerScreen extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Text(
-            'Here’s what to expect from TakeBack.',
+            'Here’s what to expect from Unbound.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 36),

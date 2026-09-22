@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:takeback/app.dart';
@@ -207,10 +208,15 @@ void main() {
     final c = controller();
     await tester.pumpWidget(TakeBackApp(controller: c));
     await tester.pumpAndSettle();
-    expect(find.text('UNLOCKED'), findsOneWidget);
+    expect(find.text('LOCK IN'), findsOneWidget);
     expect(find.text('Prototype mode — no apps are blocked'), findsNothing);
     await tapText(tester, 'LOCK IN');
-    expect(find.text('LOCKED IN'), findsOneWidget);
+    expect(find.text('UNLOCK'), findsOneWidget);
+    expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+    expect(calls.where((call) => call == 'toggleLockdown'), hasLength(1));
+    expect(find.text('Ready to unlock?'), findsNothing);
+    expect(find.text('LOCKED IN'), findsNothing);
+    expect(find.text('UNLOCKED'), findsNothing);
     await tapText(tester, 'Edit Allowed Apps');
     expect(find.text('Unlock before editing apps'), findsOneWidget);
     await tester.runAsync(c.chooseAllowedApps);
@@ -224,7 +230,7 @@ void main() {
     });
     await tester.runAsync(sendSnapshot);
     await tester.pumpAndSettle();
-    expect(find.text('UNLOCKED'), findsOneWidget);
+    expect(find.text('LOCK IN'), findsOneWidget);
     expect(find.text('LOCKED IN'), findsNothing);
     expect(c.mode, RestrictionMode.native);
     expect(memory.values[PreferencesStore.prototypeLockKey], isTrue);
@@ -240,13 +246,18 @@ void main() {
       final c = controller();
       await tester.pumpWidget(TakeBackApp(controller: c));
       await tester.pumpAndSettle();
-      expect(find.text('CHECKING'), findsOneWidget);
+      expect(
+        find.text('Checking Screen Time authorization. You can still unlock.'),
+        findsOneWidget,
+      );
       expect(find.text('LOCKED IN'), findsNothing);
       expect(find.text('UNLOCKED'), findsNothing);
+      expect(find.byIcon(Icons.help), findsOneWidget);
       await tapText(tester, 'UNLOCK');
       expect(calls, contains('disableLockdown'));
+      expect(find.text('Ready to unlock?'), findsNothing);
       expect(calls, isNot(contains('enableLockdown')));
-      expect(find.text('UNLOCKED'), findsOneWidget);
+      expect(find.text('LOCK IN'), findsOneWidget);
     },
   );
 
@@ -274,9 +285,14 @@ void main() {
       await tester.runAsync(sendSnapshot);
       await tester.pumpAndSettle();
       await tapText(tester, 'UNLOCK');
-      expect(find.text('STATE UNCONFIRMED'), findsOneWidget);
+      expect(c.lockdownState, LockdownState.error);
       expect(find.text('UNLOCKED'), findsNothing);
       expect(find.text('UNLOCK'), findsOneWidget);
+      expect(find.text('Ready to unlock?'), findsNothing);
+      operationError = null;
+      await tapText(tester, 'UNLOCK');
+      expect(c.lockdownState, LockdownState.unlocked);
+      expect(calls.where((call) => call == 'disableLockdown'), hasLength(2));
     },
   );
 
@@ -287,8 +303,68 @@ void main() {
     final c = controller();
     await tester.pumpWidget(TakeBackApp(controller: c));
     await tester.pumpAndSettle();
-    expect(find.text('STATE UNCONFIRMED'), findsOneWidget);
+    expect(c.lockdownState, LockdownState.error);
     expect(find.text('UNLOCK'), findsOneWidget);
     expect(find.text('Prototype mode — no apps are blocked'), findsNothing);
   });
+
+  testWidgets(
+    'native unlock reflects first; stay and dismissal preserve policy',
+    (tester) async {
+      state['lockdownState'] = 'locked';
+      final c = controller();
+      await tester.pumpWidget(TakeBackApp(controller: c));
+      await tester.pumpAndSettle();
+      expect(find.text('LOCKED IN'), findsNothing);
+      expect(find.text('UNLOCKED'), findsNothing);
+      expect(find.text('Unbound'), findsOneWidget);
+      await tapText(tester, 'UNLOCK');
+      expect(find.text('Ready to unlock?'), findsOneWidget);
+      expect(
+        find.text(
+          'If you’re done focusing or need something outside your allowed apps, go for it. Otherwise, you can stay locked in.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(FilledButton, 'Stay Locked In'),
+        findsOneWidget,
+      );
+      expect(calls, isNot(contains('disableLockdown')));
+      await tapText(tester, 'Stay Locked In');
+      expect(find.text('Ready to unlock?'), findsNothing);
+      expect(c.locked, isTrue);
+      expect(calls, isNot(contains('disableLockdown')));
+      await tapText(tester, 'UNLOCK');
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(c.locked, isTrue);
+      expect(calls, isNot(contains('disableLockdown')));
+      await tapText(tester, 'UNLOCK');
+      await tapText(tester, 'Unlock');
+      expect(calls.where((call) => call == 'disableLockdown'), hasLength(1));
+      expect(calls, isNot(contains('toggleLockdown')));
+      expect(c.locked, isFalse);
+      expect(find.text('LOCK IN'), findsOneWidget);
+      expect(find.text('Ready to unlock?'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'confirmation after state changes only clears and never re-locks',
+    (tester) async {
+      state['lockdownState'] = 'locked';
+      final c = controller();
+      await tester.pumpWidget(TakeBackApp(controller: c));
+      await tester.pumpAndSettle();
+      await tapText(tester, 'UNLOCK');
+      state['lockdownState'] = 'unlocked';
+      await tester.runAsync(sendSnapshot);
+      await tester.pumpAndSettle();
+      await tapText(tester, 'Unlock');
+      expect(calls.where((call) => call == 'disableLockdown'), hasLength(1));
+      expect(calls, isNot(contains('toggleLockdown')));
+      expect(c.locked, isFalse);
+    },
+  );
 }

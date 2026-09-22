@@ -2,11 +2,11 @@ import FamilyControls
 import Foundation
 import ManagedSettings
 
-enum LockdownState: String {
+enum LockdownState: String, Sendable {
   case unlocked, locked, checking, error
 }
 
-struct RestrictionSnapshot {
+struct RestrictionSnapshot: Sendable {
   let state: LockdownState
   var message: String? = nil
 }
@@ -43,13 +43,19 @@ protocol RestrictionControlling {
 final class RestrictionPolicy<Backend: RestrictionBackend>: RestrictionControlling {
   static var intentKey: String { "takeback.ios.lockdownRequested.v1" }
   private let backend: Backend
-  private let defaults: UserDefaults
-  private let selection: () -> Set<Backend.Token>?
+  private let persistence: NativePersistence
+  private let selection: () throws -> Set<Backend.Token>?
   private var clearingUnconfirmed = false
 
   init(backend: Backend, defaults: UserDefaults, selection: @escaping () -> Set<Backend.Token>?) {
     self.backend = backend
-    self.defaults = defaults
+    self.persistence = DefaultsNativePersistence(defaults)
+    self.selection = selection
+  }
+
+  init(backend: Backend, persistence: NativePersistence, selection: @escaping () throws -> Set<Backend.Token>?) {
+    self.backend = backend
+    self.persistence = persistence
     self.selection = selection
   }
 
@@ -59,13 +65,17 @@ final class RestrictionPolicy<Backend: RestrictionBackend>: RestrictionControlli
         try disable()
         return RestrictionSnapshot(state: .unlocked)
       }
+      if try persistence.object(forKey: SharedNativePersistence.pendingClearKey) as? Bool == true {
+        try disable()
+        return RestrictionSnapshot(state: .unlocked)
+      }
       switch try backend.read() {
       case .clear:
-        defaults.removeObject(forKey: Self.intentKey)
+        try persistence.set(nil, forKey: Self.intentKey)
         return RestrictionSnapshot(state: .unlocked)
       case let .allowlist(tokens, active):
-        guard active, defaults.bool(forKey: Self.intentKey),
-              let saved = selection(), (1...50).contains(saved.count), saved == tokens else {
+        guard active, try persistence.object(forKey: Self.intentKey) as? Bool == true,
+              let saved = try selection(), (1...50).contains(saved.count), saved == tokens else {
           try disable()
           return RestrictionSnapshot(state: .unlocked)
         }
@@ -78,7 +88,7 @@ final class RestrictionPolicy<Backend: RestrictionBackend>: RestrictionControlli
         return RestrictionSnapshot(state: .unlocked)
       }
     } catch {
-      return RestrictionSnapshot(state: .error, message: "Could not confirm TakeBack’s restrictions. Tap UNLOCK to retry clearing them.")
+      return RestrictionSnapshot(state: .error, message: "Could not confirm Unbound’s restrictions. Tap UNLOCK to retry clearing them.")
     }
   }
 
@@ -90,7 +100,7 @@ final class RestrictionPolicy<Backend: RestrictionBackend>: RestrictionControlli
     guard authorization == "authorized" else {
       throw RestrictionFailure(code: "authorization_required", message: "Authorize Screen Time before locking in.")
     }
-    guard let tokens = selection() else {
+    guard let tokens = try selection() else {
       throw RestrictionFailure(code: "selection_required", message: "Choose and save your allowed apps before locking in.")
     }
     guard !tokens.isEmpty else {
@@ -103,28 +113,32 @@ final class RestrictionPolicy<Backend: RestrictionBackend>: RestrictionControlli
     do {
       try backend.apply(allowing: tokens)
       guard try backend.read() == .allowlist(tokens, active: true) else {
-        throw RestrictionFailure(code: "restriction_apply_failed", message: "TakeBack could not confirm that app restrictions were applied. Please try again.")
+        throw RestrictionFailure(code: "restriction_apply_failed", message: "Unbound could not confirm that app restrictions were applied. Please try again.")
       }
-      defaults.set(true, forKey: Self.intentKey)
+      try persistence.set(true, forKey: Self.intentKey)
     } catch {
       // A partial write must never be reported as a successful lock.
       try disable()
-      throw RestrictionFailure(code: "restriction_apply_failed", message: "TakeBack could not confirm that app restrictions were applied. Please try again.")
+      throw RestrictionFailure(code: "restriction_apply_failed", message: "Unbound could not confirm that app restrictions were applied. Please try again.")
     }
   }
 
   func disable() throws {
     clearingUnconfirmed = true
     do {
+      // Clearing remains possible even when recording recovery encounters an I/O error.
+      let recorded = Result { try persistence.set(true, forKey: SharedNativePersistence.pendingClearKey) }
       try backend.clear()
       guard try backend.read() == .clear else {
         throw RestrictionFailure(code: "restriction_clear_failed", message: "Restrictions are still present.")
       }
-      defaults.removeObject(forKey: Self.intentKey)
+      try persistence.set(nil, forKey: Self.intentKey)
+      try recorded.get()
+      try persistence.set(nil, forKey: SharedNativePersistence.pendingClearKey)
       clearingUnconfirmed = false
     } catch {
       // Keep intent until clearing is verified, so relaunch also offers recovery.
-      throw RestrictionFailure(code: "restriction_clear_failed", message: "Could not confirm that TakeBack’s restrictions were cleared. Tap UNLOCK to retry.")
+      throw RestrictionFailure(code: "restriction_clear_failed", message: "Could not confirm that Unbound’s restrictions were cleared. Tap UNLOCK to retry.")
     }
   }
 }
@@ -161,6 +175,12 @@ final class TakeBackRestrictionStore: RestrictionControlling {
   init(selectionStore: AllowedAppsStore, defaults: UserDefaults = .standard) {
     policy = RestrictionPolicy(backend: ManagedSettingsBackend(), defaults: defaults) {
       selectionStore.load()?.applicationTokens
+    }
+  }
+
+  init(selectionStore: AllowedAppsStore, persistence: NativePersistence) {
+    policy = RestrictionPolicy(backend: ManagedSettingsBackend(), persistence: persistence) {
+      try selectionStore.loadValidated()?.applicationTokens
     }
   }
 

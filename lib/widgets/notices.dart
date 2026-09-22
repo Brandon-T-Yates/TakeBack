@@ -71,7 +71,7 @@ class DisclaimerText extends StatelessWidget {
     children: [
       const _DisclaimerItem(
         'A tool for your attention',
-        'TakeBack is a focus and productivity tool. It is not a security tool '
+        'Unbound is a focus and productivity tool. It is not a security tool '
             'or a parental-control guarantee.',
       ),
       const SizedBox(height: 24),
@@ -88,10 +88,10 @@ class DisclaimerText extends StatelessWidget {
             : 'This is an early prototype',
         nativeMode
             ? 'On supported iPhones, LOCK IN applies Apple’s app shields except for '
-                  'your 1–50 allowed apps. UNLOCK clears TakeBack’s restrictions. '
+                  'your 1–50 allowed apps. UNLOCK clears Unbound’s restrictions. '
                   'Other Screen Time restrictions may still apply.'
             : 'Screen Time authorization and app selection are available on supported '
-                  'iPhones. LOCK IN only changes the state inside TakeBack; other apps '
+                  'iPhones. LOCK IN only changes the state inside Unbound; other apps '
                   'remain accessible. Android setup is not available yet.',
       ),
     ],

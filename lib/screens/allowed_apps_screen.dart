@@ -117,7 +117,7 @@ class AllowedAppsScreen extends StatelessWidget {
                   : onboarding
                   ? controller.finishOnboarding
                   : () => Navigator.of(context).pop(),
-              child: Text(onboarding ? 'Continue to TakeBack' : 'Done'),
+              child: Text(onboarding ? 'Continue to Unbound' : 'Done'),
             ),
           ],
         ),

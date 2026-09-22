@@ -36,7 +36,7 @@ class _TakeBackAppState extends State<TakeBackApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'TakeBack',
+    title: 'Unbound',
     debugShowCheckedModeBanner: false,
     theme: takeBackTheme(),
     home: ListenableBuilder(

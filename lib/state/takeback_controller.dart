@@ -86,7 +86,7 @@ class TakeBackController extends ChangeNotifier {
     if (!canEditAllowedApps) {
       throw PlatformException(
         code: 'unlock_required',
-        message: 'Unlock TakeBack before changing your allowed apps.',
+        message: 'Unlock Unbound before changing your allowed apps.',
       );
     }
     try {
@@ -109,7 +109,7 @@ class TakeBackController extends ChangeNotifier {
             mode: RestrictionMode.native,
             lockdownState: LockdownState.error,
             restrictionMessage:
-                'Could not confirm TakeBack’s restrictions. Tap UNLOCK to retry clearing them.',
+                'Could not confirm Unbound’s restrictions. Tap UNLOCK to retry clearing them.',
           ),
         );
       }
@@ -139,6 +139,14 @@ class TakeBackController extends ChangeNotifier {
     }
     await _preferences.completeOnboarding();
     step = SetupStep.complete;
+  });
+
+  Future<void> unlock() => _perform(() async {
+    try {
+      await _restrictions.disableLockdown();
+    } finally {
+      await _readSetup();
+    }
   });
 
   Future<void> toggleLockdown() => _perform(() async {

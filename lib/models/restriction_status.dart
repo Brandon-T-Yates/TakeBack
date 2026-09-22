@@ -75,7 +75,7 @@ class RestrictionSetupState {
       restrictionMessage:
           data['restrictionMessage'] as String? ??
           (lockdown == LockdownState.error
-              ? 'Could not confirm TakeBack’s restrictions. Tap UNLOCK to retry clearing them.'
+              ? 'Could not confirm Unbound’s restrictions. Tap UNLOCK to retry clearing them.'
               : null),
     );
   }

@@ -13,6 +13,9 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
   private let available: Bool
   private let authorizationStatus: () -> AuthorizationStatus
   private let restrictions: (any RestrictionControlling)?
+  private let coordinator: NativeRestrictionCoordinator?
+  private var setupLease: NativeFileLease?
+  private var sharedObserver: NativeChangeObserver?
   private var authorizationObserver: AnyCancellable?
   private var foregroundObserver: AnyCancellable?
   private var pickerController: UIViewController?
@@ -32,15 +35,21 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     self.available = available ?? Self.platformAvailable
     self.authorizationStatus = authorizationStatus
     #if targetEnvironment(simulator)
+    self.coordinator = nil
     self.restrictions = restrictions
     #else
-    self.restrictions = restrictions ?? TakeBackRestrictionStore(selectionStore: store)
+    let coordinator = restrictions == nil ? NativeRestrictionCoordinator(legacy: .standard) : nil
+    self.coordinator = coordinator
+    self.restrictions = restrictions ?? coordinator
     #endif
     self.presenter = presenter
     super.init()
     channel.setMethodCallHandler { [weak self] call, result in
       guard let self else { return }
       self.handle(call, result: result)
+    }
+    if coordinator != nil {
+      sharedObserver = NativeChangeObserver { [weak self] in self?.authorizationChanged() }
     }
     #if !targetEnvironment(simulator)
     authorizationObserver = AuthorizationCenter.shared.$authorizationStatus
@@ -76,6 +85,7 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
   }
 
   private func snapshot(denied: Bool = false) -> [String: Any] {
+    if let coordinator { return coordinator.snapshot(denied: denied).metadata }
     let status = denied ? "denied" : authorization
     // Startup can report notDetermined before the system restores approval.
     // Only an explicit denial invalidates otherwise valid persisted tokens.
@@ -149,7 +159,7 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     } catch let failure as RestrictionFailure {
       result(FlutterError(code: failure.code, message: failure.message, details: nil))
     } catch {
-      result(FlutterError(code: "restriction_failed", message: "Could not confirm TakeBack’s restrictions. Try UNLOCK to clear them.", details: nil))
+      result(FlutterError(code: "restriction_failed", message: "Could not confirm Unbound’s restrictions. Try UNLOCK to clear them.", details: nil))
     }
   }
 
@@ -164,9 +174,11 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     }
     // Clear a denied/invalid selection, retaining valid data while status is unresolved.
     _ = snapshot()
+    do { setupLease = try coordinator?.beginSetup(requireUnlocked: false) }
+    catch { result(setupError(error)); return }
     requestingAuthorization = true
     Task { @MainActor in
-      defer { requestingAuthorization = false }
+      defer { requestingAuthorization = false; setupLease = nil }
       do {
         try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
         authorizationChanged()
@@ -189,7 +201,7 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     let state = snapshot()
     guard available else { result("unavailable"); return }
     guard state["lockdownState"] as? String == "unlocked" else {
-      result(FlutterError(code: "unlock_required", message: "Unlock TakeBack before changing your allowed apps.", details: nil))
+      result(FlutterError(code: "unlock_required", message: "Unlock Unbound before changing your allowed apps.", details: nil))
       return
     }
     guard authorization == "authorized" else {
@@ -201,8 +213,13 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
       result(FlutterError(code: "busy", message: "Close the current sheet and try choosing apps again.", details: nil))
       return
     }
+    let initialSelection: FamilyActivitySelection
+    do {
+      setupLease = try coordinator?.beginSetup(requireUnlocked: true)
+      initialSelection = try coordinator?.loadSelection() ?? store.load() ?? FamilyActivitySelection()
+    } catch { setupLease = nil; result(setupError(error)); return }
     let picker = AllowedAppsPicker(
-      selection: store.load() ?? FamilyActivitySelection(),
+      selection: initialSelection,
       save: { [weak self] selection in
         guard let self, self.pickerResult != nil else { return }
         guard self.authorization == "authorized" else {
@@ -210,7 +227,8 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
           return
         }
         // Validation throws into the visible picker message; nothing is saved.
-        try self.store.save(selection)
+        if let coordinator = self.coordinator { try coordinator.saveSelection(selection) }
+        else { try self.store.save(selection) }
         self.channel.invokeMethod("setupChanged", arguments: self.snapshot())
         self.finishPicker("selected")
       },
@@ -229,11 +247,18 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     let host = pickerController
     pickerResult = nil
     pickerController = nil
+    setupLease = nil
     if let host, host.presentingViewController != nil {
       host.dismiss(animated: true) { result(value) }
     } else {
       result(value)
     }
+  }
+
+  private func setupError(_ error: Error) -> FlutterError {
+    let failure = error as? RestrictionFailure
+    return FlutterError(code: failure?.code ?? "shared_storage_unavailable",
+      message: failure?.message ?? "Could not access Unbound’s shared state. Please try again.", details: nil)
   }
 
   func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {

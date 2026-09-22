@@ -41,12 +41,12 @@ class WelcomeScreen extends StatelessWidget {
           const StepLabel('LESS NOISE. MORE YOU.'),
           const SizedBox(height: 18),
           Text(
-            'Take back\nyour attention.',
+            'Take back your time.',
             style: Theme.of(context).textTheme.displaySmall,
           ),
           const SizedBox(height: 20),
           Text(
-            'Choose the apps you want to keep. TakeBack is designed to '
+            'Choose the apps you want to keep. Unbound is designed to '
             'restrict the rest with one button.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),

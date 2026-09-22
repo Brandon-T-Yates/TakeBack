@@ -37,7 +37,7 @@ class PermissionScreen extends StatelessWidget {
                   ? native
                         ? 'Authorize Screen Time to choose the apps that remain accessible while locked in.'
                         : 'Authorize Screen Time to choose the apps you want to allow in a future lock session.'
-                  : 'TakeBack will need device permissions to restrict apps. '
+                  : 'Unbound will need device permissions to restrict apps. '
                         'Android blocking will follow the iOS implementation.',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
@@ -47,7 +47,7 @@ class PermissionScreen extends StatelessWidget {
                   ? 'Permission setup is coming in a future version. Continuing '
                         'does not request or grant any device permissions.'
                   : native
-                  ? 'LOCK IN requires Screen Time approval and 1–50 saved allowed apps. UNLOCK clears TakeBack’s restrictions.'
+                  ? 'LOCK IN requires Screen Time approval and 1–50 saved allowed apps. UNLOCK clears Unbound’s restrictions.'
                   : !available
                   ? 'Screen Time setup requires a provisioned physical iPhone. '
                         'It is unavailable in the simulator. You can continue in prototype mode.'

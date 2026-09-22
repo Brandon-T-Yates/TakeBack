@@ -4,7 +4,7 @@ import Foundation
 /// Stores opaque app tokens only. This never reads the Flutter prototype key.
 final class AllowedAppsStore {
   static let selectionKey = "takeback.ios.allowedApplications.v1"
-  private let defaults: UserDefaults
+  private let persistence: NativePersistence
 
   enum SelectionError: LocalizedError {
     case unsupportedSelection
@@ -15,7 +15,13 @@ final class AllowedAppsStore {
   }
 
   init(defaults: UserDefaults = .standard) {
-    self.defaults = defaults
+    self.persistence = DefaultsNativePersistence(defaults)
+  }
+
+  init(persistence: NativePersistence) { self.persistence = persistence }
+
+  static func decode(_ data: Data) throws -> FamilyActivitySelection {
+    try applicationsOnly(JSONDecoder().decode(FamilyActivitySelection.self, from: data))
   }
 
   static func applicationsOnly(_ selection: FamilyActivitySelection) throws -> FamilyActivitySelection {
@@ -38,25 +44,20 @@ final class AllowedAppsStore {
   func save(_ selection: FamilyActivitySelection) throws {
     let validated = try Self.applicationsOnly(selection)
     let data = try JSONEncoder().encode(validated)
-    defaults.set(data, forKey: Self.selectionKey)
+    try persistence.set(data, forKey: Self.selectionKey)
   }
 
-  func load() -> FamilyActivitySelection? {
-    guard defaults.object(forKey: Self.selectionKey) != nil else { return nil }
-    guard let data = defaults.data(forKey: Self.selectionKey) else {
-      clear()
+  func load() -> FamilyActivitySelection? { try? loadValidated() }
+
+  func loadValidated() throws -> FamilyActivitySelection? {
+    guard let value = try persistence.object(forKey: Self.selectionKey) else { return nil }
+    guard let data = value as? Data, let selection = try? Self.decode(data) else {
+      try clearValidated()
       return nil
     }
-    do {
-      return try Self.applicationsOnly(JSONDecoder().decode(FamilyActivitySelection.self, from: data))
-    } catch {
-      // Corrupt or unsupported stored data cannot become an allowlist.
-      clear()
-      return nil
-    }
+    return selection
   }
 
-  func clear() {
-    defaults.removeObject(forKey: Self.selectionKey)
-  }
+  func clearValidated() throws { try persistence.set(nil, forKey: Self.selectionKey) }
+  func clear() { try? clearValidated() }
 }

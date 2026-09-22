@@ -1,9 +1,14 @@
 # Phase 3 handoff
 
-Real iOS allowlist shielding is implemented. **Physical shielding validation is
-pending.** Phase 2 authorization, native picker, app-only saving, and populated
-selection persistence across force-close/relaunch were reported validated by the
-user on a physical iPhone. This does not establish Phase 3 shield enforcement.
+Real iOS allowlist shielding is implemented. On September 22, 2026, the user
+reported Phase 3 physically validated on an iPhone: authorization, allowed-app
+selection, real shielding, allowed-app access, reliable unlocking, and correct
+restriction state after relaunch. Phase 2 selection persistence was also previously
+reported validated. These are user-reported device results.
+
+This document preserves the Phase 3 implementation history. Phase 4A renames visible
+branding to Unbound and removes the main-screen status pill; see the
+[Phase 4A handoff](phase-4a-handoff.md) for current interaction behavior.
 
 ## Policy and ownership
 

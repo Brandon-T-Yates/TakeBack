@@ -1,0 +1,2 @@
+// Match Flutter's generated version/build numbers without linking Flutter.
+#include "../Flutter/Generated.xcconfig"

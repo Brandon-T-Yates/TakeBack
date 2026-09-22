@@ -77,7 +77,7 @@ class IosAppRestrictionService implements AppRestrictionService {
       throw PlatformException(
         code: 'restriction_state_unknown',
         message:
-            'Could not confirm TakeBack’s restrictions. You can still unlock.',
+            'Could not confirm Unbound’s restrictions. You can still unlock.',
       );
     }
     return enabled;

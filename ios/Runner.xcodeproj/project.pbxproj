@@ -7,23 +7,45 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FA3100000000000000000000 /* TakeBackRestrictionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3000000000000000000000 /* TakeBackRestrictionStore.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		14CB06322DF320232505FCD2 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 706302FE2F69B579EB515AAE /* Pods_RunnerTests.framework */; };
+		274BEB0C3F3C8F54BC6CBA99 /* AllowedAppsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2000000000000000000002 /* AllowedAppsStore.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		494282E6316F22DB07C00AF8 /* NativeRestrictionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D45213238FA4C1EB05DE64 /* NativeRestrictionCoordinator.swift */; };
+		651048538C1B063BC0B881FA /* WidgetControlLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10721BD2D9252DD69A3D0F2B /* WidgetControlLabel.swift */; };
+		65BED30BA6EC927BC19EFF73 /* WidgetRestrictionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D0A0A84C5A68A9E0028E256 /* WidgetRestrictionState.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
+		8AE9BECFFBA6C57660DF4D74 /* WidgetRestrictionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D0A0A84C5A68A9E0028E256 /* WidgetRestrictionState.swift */; };
+		8B48CE520CF2CA7EF997C046 /* UnboundWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A290B953AC2C729A7BFE0BD5 /* UnboundWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		9CA042A1CB6935F2A46E89A2 /* NativePersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E42DD939CA0150DB5048FA9 /* NativePersistence.swift */; };
+		9F32596567BCAB19DA046D97 /* NativeRestrictionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D45213238FA4C1EB05DE64 /* NativeRestrictionCoordinator.swift */; };
+		A93ACC85D84A1652E475FCB2 /* TakeBackRestrictionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3000000000000000000000 /* TakeBackRestrictionStore.swift */; };
+		A98B133CB1BB23B8E777D135 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E518175E65C75EA86023E13D /* Foundation.framework */; };
 		B1B335E7529DCEE5E0C1B74E /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBBBA2A083473205FF62F9D1 /* Pods_Runner.framework */; };
+		BA0E166FCDA00B164EB26EF4 /* SetLockdownIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9D3F049EF877F574EB48619 /* SetLockdownIntent.swift */; };
+		D422CABD4F6B192CE8F094DA /* UnboundWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D4DE4F602F6D3AB5B41BEB6 /* UnboundWidget.swift */; };
+		DB78B7A3EF14FAA672A74DF2 /* WidgetControlLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10721BD2D9252DD69A3D0F2B /* WidgetControlLabel.swift */; };
+		E497AD427C379D1F6D7E6951 /* NativePersistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E42DD939CA0150DB5048FA9 /* NativePersistence.swift */; };
 		FA2100000000000000000000 /* FamilyControlsBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2000000000000000000000 /* FamilyControlsBridge.swift */; };
 		FA2100000000000000000001 /* AllowedAppsPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2000000000000000000001 /* AllowedAppsPicker.swift */; };
 		FA2100000000000000000002 /* AllowedAppsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2000000000000000000002 /* AllowedAppsStore.swift */; };
+		FA3100000000000000000000 /* TakeBackRestrictionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3000000000000000000000 /* TakeBackRestrictionStore.swift */; };
+		FD067B44A0611D94A5090864 /* WidgetAndSharedStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7677C3203E589DB06B645568 /* WidgetAndSharedStateTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		11DC509C9FC174FB8CF8BFC0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 59BF3D2796EF24CB5F0147F3;
+			remoteInfo = UnboundWidgetExtension;
+		};
 		331C8085294A63A400263BE5 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
@@ -34,6 +56,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		422A74EEC1D7A9507CCDBB75 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8B48CE520CF2CA7EF997C046 /* UnboundWidgetExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9705A1C41CF9048500538489 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -47,20 +80,26 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		FA3000000000000000000000 /* TakeBackRestrictionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeBackRestrictionStore.swift; sourceTree = "<group>"; };
+		10721BD2D9252DD69A3D0F2B /* WidgetControlLabel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetControlLabel.swift; sourceTree = "<group>"; };
 		11F83380F548CCCE2484BCA9 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+		1AC803AA729FAB410FEA8F1C /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1D4DE4F602F6D3AB5B41BEB6 /* UnboundWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = UnboundWidget.swift; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		3E42DD939CA0150DB5048FA9 /* NativePersistence.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativePersistence.swift; sourceTree = "<group>"; };
 		4D1BE3F767B1AF4B5D6E3FFC /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
+		4E967B0952537C4080176813 /* UnboundWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = UnboundWidget.entitlements; sourceTree = "<group>"; };
 		706302FE2F69B579EB515AAE /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		7677C3203E589DB06B645568 /* WidgetAndSharedStateTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetAndSharedStateTests.swift; sourceTree = "<group>"; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		7EE4EC539E0E5F604DA30DEB /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		8D0A0A84C5A68A9E0028E256 /* WidgetRestrictionState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetRestrictionState.swift; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
 		97C146EE1CF9000F007C117D /* Runner.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Runner.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -68,17 +107,31 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A0D45213238FA4C1EB05DE64 /* NativeRestrictionCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeRestrictionCoordinator.swift; sourceTree = "<group>"; };
+		A290B953AC2C729A7BFE0BD5 /* UnboundWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = UnboundWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BBBBA2A083473205FF62F9D1 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB43C89832C2CC8345B6FCB6 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
+		DE7DD69B2037C7190FF2A594 /* Widget.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = Widget.xcconfig; sourceTree = "<group>"; };
 		E43E05CA8F5282010060A5F4 /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
+		E518175E65C75EA86023E13D /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		EACC0A07D55E27837B914A35 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		F9D3F049EF877F574EB48619 /* SetLockdownIntent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SetLockdownIntent.swift; sourceTree = "<group>"; };
 		FA2000000000000000000000 /* FamilyControlsBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyControlsBridge.swift; sourceTree = "<group>"; };
 		FA2000000000000000000001 /* AllowedAppsPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllowedAppsPicker.swift; sourceTree = "<group>"; };
 		FA2000000000000000000002 /* AllowedAppsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllowedAppsStore.swift; sourceTree = "<group>"; };
 		FA2200000000000000000000 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
+		FA3000000000000000000000 /* TakeBackRestrictionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TakeBackRestrictionStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2CB85081D0F167B79EAE2015 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A98B133CB1BB23B8E777D135 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EB1CF9000F007C117D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -103,6 +156,7 @@
 			isa = PBXGroup;
 			children = (
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
+				7677C3203E589DB06B645568 /* WidgetAndSharedStateTests.swift */,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -125,8 +179,34 @@
 			children = (
 				BBBBA2A083473205FF62F9D1 /* Pods_Runner.framework */,
 				706302FE2F69B579EB515AAE /* Pods_RunnerTests.framework */,
+				E0C72A331843B8074EF551A1 /* iOS */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		82E4D37119F314FEBBD22BED /* UnboundWidget */ = {
+			isa = PBXGroup;
+			children = (
+				1D4DE4F602F6D3AB5B41BEB6 /* UnboundWidget.swift */,
+				F9D3F049EF877F574EB48619 /* SetLockdownIntent.swift */,
+				1AC803AA729FAB410FEA8F1C /* Info.plist */,
+				4E967B0952537C4080176813 /* UnboundWidget.entitlements */,
+				DE7DD69B2037C7190FF2A594 /* Widget.xcconfig */,
+			);
+			name = UnboundWidget;
+			path = UnboundWidget;
+			sourceTree = "<group>";
+		};
+		92D633767F418F3C3B203890 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				3E42DD939CA0150DB5048FA9 /* NativePersistence.swift */,
+				A0D45213238FA4C1EB05DE64 /* NativeRestrictionCoordinator.swift */,
+				8D0A0A84C5A68A9E0028E256 /* WidgetRestrictionState.swift */,
+				10721BD2D9252DD69A3D0F2B /* WidgetControlLabel.swift */,
+			);
+			name = Shared;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		9740EEB11CF90186004384FC /* Flutter */ = {
@@ -150,6 +230,8 @@
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				508666A347992530942C4549 /* Pods */,
 				647435430CF3AC6068A5ED37 /* Frameworks */,
+				92D633767F418F3C3B203890 /* Shared */,
+				82E4D37119F314FEBBD22BED /* UnboundWidget */,
 			);
 			sourceTree = "<group>";
 		};
@@ -158,6 +240,7 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				A290B953AC2C729A7BFE0BD5 /* UnboundWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -182,6 +265,14 @@
 			path = Runner;
 			sourceTree = "<group>";
 		};
+		E0C72A331843B8074EF551A1 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				E518175E65C75EA86023E13D /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -204,6 +295,23 @@
 			productReference = 331C8081294A63A400263BE5 /* RunnerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		59BF3D2796EF24CB5F0147F3 /* UnboundWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5FBBF25CAA81FE5B1127E7A7 /* Build configuration list for PBXNativeTarget "UnboundWidgetExtension" */;
+			buildPhases = (
+				40D0E92FBBD33DF633D5CE78 /* Sources */,
+				2CB85081D0F167B79EAE2015 /* Frameworks */,
+				8B606ABDE518418A731B3006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = UnboundWidgetExtension;
+			productName = UnboundWidgetExtension;
+			productReference = A290B953AC2C729A7BFE0BD5 /* UnboundWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		97C146ED1CF9000F007C117D /* Runner */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;
@@ -214,11 +322,13 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				422A74EEC1D7A9507CCDBB75 /* Embed App Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A8B990F1A8D4F5ABED825830 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -242,10 +352,25 @@
 						CreatedOnToolsVersion = 14.0;
 						TestTargetID = 97C146ED1CF9000F007C117D;
 					};
+					59BF3D2796EF24CB5F0147F3 = {
+						CreatedOnToolsVersion = 27.0;
+						DevelopmentTeam = 73VCXU624N;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
+							com.apple.FamilyControls = {
+								enabled = 1;
+							};
+						};
+					};
 					97C146ED1CF9000F007C117D = {
 						CreatedOnToolsVersion = 7.3.1;
 						LastSwiftMigration = 1100;
 						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 1;
+							};
 							com.apple.FamilyControls = {
 								enabled = 1;
 							};
@@ -271,12 +396,20 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
+				59BF3D2796EF24CB5F0147F3 /* UnboundWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		331C807F294A63A400263BE5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8B606ABDE518418A731B3006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -380,6 +513,22 @@
 			buildActionMask = 2147483647;
 			files = (
 				331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */,
+				FD067B44A0611D94A5090864 /* WidgetAndSharedStateTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		40D0E92FBBD33DF633D5CE78 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D422CABD4F6B192CE8F094DA /* UnboundWidget.swift in Sources */,
+				BA0E166FCDA00B164EB26EF4 /* SetLockdownIntent.swift in Sources */,
+				E497AD427C379D1F6D7E6951 /* NativePersistence.swift in Sources */,
+				9F32596567BCAB19DA046D97 /* NativeRestrictionCoordinator.swift in Sources */,
+				8AE9BECFFBA6C57660DF4D74 /* WidgetRestrictionState.swift in Sources */,
+				274BEB0C3F3C8F54BC6CBA99 /* AllowedAppsStore.swift in Sources */,
+				A93ACC85D84A1652E475FCB2 /* TakeBackRestrictionStore.swift in Sources */,
+				DB78B7A3EF14FAA672A74DF2 /* WidgetControlLabel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -393,6 +542,10 @@
 				FA2100000000000000000000 /* FamilyControlsBridge.swift in Sources */,
 				FA3100000000000000000000 /* TakeBackRestrictionStore.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
+				9CA042A1CB6935F2A46E89A2 /* NativePersistence.swift in Sources */,
+				494282E6316F22DB07C00AF8 /* NativeRestrictionCoordinator.swift in Sources */,
+				65BED30BA6EC927BC19EFF73 /* WidgetRestrictionState.swift in Sources */,
+				651048538C1B063BC0B881FA /* WidgetControlLabel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -403,6 +556,12 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		A8B990F1A8D4F5ABED825830 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = UnboundWidgetExtension;
+			target = 59BF3D2796EF24CB5F0147F3 /* UnboundWidgetExtension */;
+			targetProxy = 11DC509C9FC174FB8CF8BFC0 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -709,6 +868,89 @@
 			};
 			name = Release;
 		};
+		9F80E9158B755F55C9FFACF7 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = DE7DD69B2037C7190FF2A594 /* Widget.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = UnboundWidget/UnboundWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 73VCXU624N;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = UnboundWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.tyleryates.takeback.UnboundWidget;
+				PRODUCT_MODULE_NAME = UnboundWidgetExtension;
+				PRODUCT_NAME = UnboundWidgetExtension;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Profile;
+		};
+		A8EE9C898639314D91EB0A5F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = DE7DD69B2037C7190FF2A594 /* Widget.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = UnboundWidget/UnboundWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 73VCXU624N;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = UnboundWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.tyleryates.takeback.UnboundWidget;
+				PRODUCT_MODULE_NAME = UnboundWidgetExtension;
+				PRODUCT_NAME = UnboundWidgetExtension;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B432B73863E6B85A88AC6CC8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = DE7DD69B2037C7190FF2A594 /* Widget.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = UnboundWidget/UnboundWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 73VCXU624N;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = UnboundWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.tyleryates.takeback.UnboundWidget;
+				PRODUCT_MODULE_NAME = UnboundWidgetExtension;
+				PRODUCT_NAME = UnboundWidgetExtension;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -718,6 +960,16 @@
 				331C8088294A63A400263BE5 /* Debug */,
 				331C8089294A63A400263BE5 /* Release */,
 				331C808A294A63A400263BE5 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5FBBF25CAA81FE5B1127E7A7 /* Build configuration list for PBXNativeTarget "UnboundWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B432B73863E6B85A88AC6CC8 /* Release */,
+				A8EE9C898639314D91EB0A5F /* Debug */,
+				9F80E9158B755F55C9FFACF7 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

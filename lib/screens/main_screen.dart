@@ -8,9 +8,65 @@ import '../widgets/page_body.dart';
 import 'allowed_apps_screen.dart';
 import 'settings_screen.dart';
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends StatefulWidget {
   const MainScreen({super.key, required this.controller});
   final TakeBackController controller;
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  bool _promptOpen = false;
+  TakeBackController get controller => widget.controller;
+
+  Future<void> _handleLockControl() async {
+    if (_promptOpen || controller.busy) return;
+    if (controller.mode != RestrictionMode.native || !controller.needsUnlock) {
+      await controller.toggleLockdown();
+      return;
+    }
+    // Uncertain states retain the immediate recovery path.
+    if (controller.lockdownState != LockdownState.locked) {
+      await controller.unlock();
+      return;
+    }
+    _promptOpen = true;
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Ready to unlock?'),
+          content: const Text(
+            'If you’re done focusing or need something outside your allowed apps, '
+            'go for it. Otherwise, you can stay locked in.',
+          ),
+          actions: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton(
+                  autofocus: true,
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Stay Locked In'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Unlock'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true && mounted) {
+        // Always clear, even if a notification changed state during the prompt.
+        await controller.unlock();
+      }
+    } finally {
+      _promptOpen = false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final locked = controller.locked;
@@ -47,47 +103,6 @@ class MainScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Spacer(),
-            Center(
-              child: Semantics(
-                liveRegion: true,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: locked ? softGreen : const Color(0xFFEDECE6),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        locked ? Icons.circle : Icons.circle_outlined,
-                        size: 8,
-                        color: ink,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        switch (status) {
-                          LockdownState.locked => 'LOCKED IN',
-                          LockdownState.unlocked => 'UNLOCKED',
-                          LockdownState.checking => 'CHECKING',
-                          LockdownState.error => 'STATE UNCONFIRMED',
-                        },
-                        style: const TextStyle(
-                          fontSize: 12,
-                          letterSpacing: 1.8,
-                          fontWeight: FontWeight.w700,
-                          color: ink,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
             Text(
               locked
                   ? 'Make room\nfor what matters.'
@@ -100,7 +115,7 @@ class MainScreen extends StatelessWidget {
               status == LockdownState.checking
                   ? 'Checking Screen Time authorization. You can still unlock.'
                   : status == LockdownState.error
-                  ? 'You can still clear TakeBack’s restrictions.'
+                  ? 'You can still clear Unbound’s restrictions.'
                   : locked
                   ? native
                         ? 'Your app restriction policy is active.'
@@ -124,15 +139,39 @@ class MainScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(64),
                     ),
                   ),
-                  onPressed: controller.busy ? null : controller.toggleLockdown,
+                  onPressed: controller.busy ? null : _handleLockControl,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        needsUnlock
-                            ? Icons.lock_open_rounded
-                            : Icons.north_west_rounded,
-                        size: 42,
+                      Semantics(
+                        label: status == LockdownState.locked
+                            ? 'Locked'
+                            : status == LockdownState.unlocked
+                            ? 'Unlocked'
+                            : 'Restriction state unconfirmed',
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Icon(
+                              status == LockdownState.unlocked
+                                  ? Icons.lock_open_rounded
+                                  : Icons.lock_rounded,
+                              size: 42,
+                              color:
+                                  status == LockdownState.checking ||
+                                      status == LockdownState.error
+                                  ? Colors.white70
+                                  : null,
+                            ),
+                            if (status == LockdownState.checking ||
+                                status == LockdownState.error)
+                              const Positioned(
+                                right: -8,
+                                bottom: -3,
+                                child: Icon(Icons.help, size: 19),
+                              ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 22),
                       Text(

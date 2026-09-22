@@ -7,13 +7,11 @@ class Brand extends StatelessWidget {
   Widget build(BuildContext context) => const Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Icon(Icons.north_west_rounded, size: 25, color: ink),
-      SizedBox(width: 9),
       Flexible(
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            'TakeBack',
+            'Unbound',
             style: TextStyle(
               fontSize: 23,
               fontWeight: FontWeight.w700,

@@ -58,9 +58,9 @@ void main() {
       ),
       findsOneWidget,
     );
-    await tap('Continue to TakeBack');
+    await tap('Continue to Unbound');
     await tap('LOCK IN');
-    expect(find.text('LOCKED IN'), findsOneWidget);
+    expect(find.text('UNLOCK'), findsOneWidget);
     expect(
       find.text('Prototype mode — no apps are blocked').hitTestable(),
       findsOneWidget,
@@ -78,9 +78,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pumpWidget(freshApp());
     await tester.pumpAndSettle();
-    expect(find.text('LOCKED IN'), findsOneWidget);
+    expect(find.text('UNLOCK'), findsOneWidget);
     await tap('UNLOCK');
-    expect(find.text('UNLOCKED'), findsOneWidget);
+    expect(find.text('LOCK IN'), findsOneWidget);
     expect(await PreferencesStore().prototypeLockEnabled, isFalse);
     expect(tester.takeException(), isNull);
   });

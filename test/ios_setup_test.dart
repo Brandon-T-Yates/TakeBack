@@ -165,7 +165,7 @@ void main() {
     expect(find.text('No usable app selection saved'), findsOneWidget);
     expect(find.text('Authorize Screen Time'), findsOneWidget);
     expect(controller.setup.selectionUsable, isFalse);
-    await tapText(tester, 'Continue to TakeBack');
+    await tapText(tester, 'Continue to Unbound');
     await tapText(tester, 'LOCK IN');
     expect(find.text('Prototype mode — no apps are blocked'), findsNothing);
     expect(controller.locked, isFalse);

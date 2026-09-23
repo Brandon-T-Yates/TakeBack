@@ -70,29 +70,29 @@ class DisclaimerText extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       const _DisclaimerItem(
-        'A tool for your attention',
-        'Unbound is a focus and productivity tool. It is not a security tool '
-            'or a parental-control guarantee.',
-      ),
-      const SizedBox(height: 24),
-      const _DisclaimerItem(
-        'Your device sets the limits',
-        'App restrictions require operating-system permissions. Certain '
-            'system apps and emergency functions may remain accessible. '
-            'Platform limitations affect what can be restricted.',
+        'A focus tool, not a safety system',
+        'Unbound uses Apple’s Screen Time controls to help you focus. It is '
+            'not a security system, parental-control guarantee, or '
+            'emergency-access mechanism.',
       ),
       const SizedBox(height: 24),
       _DisclaimerItem(
+        'When you lock in',
         nativeMode
-            ? 'You choose what stays accessible'
-            : 'This is an early prototype',
-        nativeMode
-            ? 'On supported iPhones, LOCK IN applies Apple’s app shields except for '
-                  'your 1–50 allowed apps. UNLOCK clears Unbound’s restrictions. '
-                  'Other Screen Time restrictions may still apply.'
-            : 'Screen Time authorization and app selection are available on supported '
-                  'iPhones. LOCK IN only changes the state inside Unbound; other apps '
-                  'remain accessible. Android setup is not available yet.',
+            ? 'Apps outside your allowed set may be unavailable while Unbound '
+                  'is locked in. Apple controls which system and emergency '
+                  'apps remain accessible.'
+            : 'On supported iPhones, apps outside your allowed set may be '
+                  'unavailable while Unbound is locked in. Apple controls '
+                  'which system and emergency apps remain accessible. In '
+                  'prototype mode, other apps remain accessible.',
+      ),
+      const SizedBox(height: 24),
+      const _DisclaimerItem(
+        'You stay in control',
+        'You can unlock in Unbound or change or revoke Unbound’s Screen Time '
+            'access in iOS Settings. Do not rely on Unbound to guarantee '
+            'access to—or restriction of—critical or emergency apps.',
       ),
     ],
   );

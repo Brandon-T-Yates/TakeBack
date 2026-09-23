@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:takeback/app.dart';
+import 'package:takeback/screens/settings_screen.dart';
 import 'package:takeback/widgets/brand.dart';
 import 'package:takeback/services/preferences_store.dart';
 
@@ -14,6 +16,16 @@ Future<void> tapText(WidgetTester tester, String text) async {
 }
 
 void main() {
+  setUp(() {
+    PackageInfo.setMockInitialValues(
+      appName: 'Unbound',
+      packageName: 'com.tyleryates.takeback',
+      version: '0.1.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+  });
+
   testWidgets('onboarding, lock controls, allowed apps and settings work', (
     tester,
   ) async {
@@ -30,12 +42,26 @@ void main() {
       findsNothing,
     );
     expect(find.text('Take back your time.'), findsOneWidget);
+    expect(find.byIcon(Icons.north_west_rounded), findsNothing);
+    expect(
+      find.text('No account. No subscription. Just focus.'),
+      findsOneWidget,
+    );
     expect(
       tester.widget<MaterialApp>(find.byType(MaterialApp)).title,
       'Unbound',
     );
     await tapText(tester, 'Get Started');
     expect(find.text('Here’s what to expect from Unbound.'), findsOneWidget);
+    expect(find.text('A focus tool, not a safety system'), findsOneWidget);
+    expect(find.text('When you lock in'), findsOneWidget);
+    expect(find.text('You stay in control'), findsOneWidget);
+    expect(find.textContaining('not a security system'), findsOneWidget);
+    expect(
+      find.textContaining('change or revoke Unbound’s Screen Time access'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('critical or emergency apps'), findsOneWidget);
     expect(memory.values[PreferencesStore.disclaimerKey], isNull);
     await tapText(tester, 'I Understand');
     expect(memory.values[PreferencesStore.disclaimerKey], isTrue);
@@ -65,9 +91,14 @@ void main() {
     expect(find.text('LOCK IN'), findsOneWidget);
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
-    expect(find.text('A tool for your attention'), findsOneWidget);
     expect(find.text('ABOUT UNBOUND'), findsOneWidget);
     expect(find.text('Take back your time.'), findsOneWidget);
+    expect(find.text('HOW UNBOUND WORKS'), findsOneWidget);
+    expect(find.text('SUPPORT & PRIVACY'), findsOneWidget);
+    expect(find.text('Support'), findsOneWidget);
+    expect(find.text('Privacy Policy'), findsOneWidget);
+    expect(find.text('ABOUT'), findsOneWidget);
+    expect(find.text('Version 0.1.0 (1)'), findsOneWidget);
     expect(find.text('Removing Unbound?'), findsOneWidget);
     expect(
       find.text(
@@ -80,6 +111,52 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('LOCK IN'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('settings launches support email and leaves policy disabled', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final memory = MemoryPreferences();
+    final controller = makeController(memory);
+    addTearDown(controller.dispose);
+    Uri? launched;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SettingsScreen(
+          controller: controller,
+          launchUri: (uri) async {
+            launched = uri;
+            return true;
+          },
+          loadPackageInfo: () async => PackageInfo(
+            appName: 'Unbound',
+            packageName: 'com.tyleryates.takeback',
+            version: '1.2.3',
+            buildNumber: '45',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('support@tyler.yates.me'), findsOneWidget);
+    expect(find.text('Production URL not configured'), findsOneWidget);
+    expect(find.text('Version 1.2.3 (45)'), findsOneWidget);
+    await tapText(tester, 'Support');
+    expect(launched, Uri.parse('mailto:support@tyler.yates.me'));
+
+    final policyRow = tester.widget<InkWell>(
+      find.ancestor(
+        of: find.text('Privacy Policy'),
+        matching: find.byType(InkWell),
+      ),
+    );
+    expect(policyRow.onTap, isNull);
   });
 
   testWidgets('allowed apps fits a compact iPhone without scrolling', (

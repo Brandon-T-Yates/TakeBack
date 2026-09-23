@@ -43,6 +43,11 @@ void main() {
 
     await tester.pumpWidget(freshApp());
     await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.north_west_rounded), findsNothing);
+    expect(
+      find.text('No account. No subscription. Just focus.'),
+      findsOneWidget,
+    );
     await tap('Get Started');
     await tap('I Understand');
     await tap(
@@ -69,7 +74,8 @@ void main() {
     await tap('Done');
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
-    expect(find.text('A tool for your attention'), findsOneWidget);
+    expect(find.text('HOW UNBOUND WORKS'), findsOneWidget);
+    expect(find.text('support@tyler.yates.me'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 

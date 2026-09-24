@@ -9,10 +9,12 @@ struct NativeSetupSnapshot {
   var failureCode: String? = nil
 
   var metadata: [String: Any] {
-    let usable = authorization == "authorized" && selection != nil
+    let saved = authorization == "authorized" && selection != nil
+    let count = saved ? selection!.applicationTokens.count : 0
+    let usable = saved && (1...50).contains(count)
     var result: [String: Any] = [
       "available": true, "authorization": authorization,
-      "hasSavedSelection": usable, "applicationCount": usable ? selection!.applicationTokens.count : 0,
+      "hasSavedSelection": saved, "applicationCount": count,
       "selectionUsable": usable, "restrictionMode": "native", "lockdownState": restriction.state.rawValue,
     ]
     if let message = restriction.message { result["restrictionMessage"] = message }

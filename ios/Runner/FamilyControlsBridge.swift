@@ -94,13 +94,15 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     if status == "denied" { store.clear() }
     let savedSelection = store.load()
     let selection = status == "authorized" ? savedSelection : nil
+    let count = selection?.applicationTokens.count ?? 0
+    let selectionUsable = selection != nil && (1...50).contains(count)
     let restriction = restrictions?.reconcile(authorization: status) ?? RestrictionSnapshot(state: .unlocked)
     var state: [String: Any] = [
       "available": available,
       "authorization": status,
       "hasSavedSelection": selection != nil,
-      "applicationCount": selection?.applicationTokens.count ?? 0,
-      "selectionUsable": status == "authorized" && selection != nil,
+      "applicationCount": count,
+      "selectionUsable": selectionUsable,
       "restrictionMode": restrictions == nil ? "prototype" : "native",
       "lockdownState": restriction.state.rawValue,
     ]

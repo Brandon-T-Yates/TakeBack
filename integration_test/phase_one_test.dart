@@ -75,7 +75,7 @@ void main() {
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     expect(find.text('HOW UNBOUND WORKS'), findsOneWidget);
-    expect(find.text('support@tyler.yates.me'), findsOneWidget);
+    expect(find.text('support@tyleryates.me'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 

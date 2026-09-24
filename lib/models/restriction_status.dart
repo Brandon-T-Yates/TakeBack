@@ -53,13 +53,11 @@ class RestrictionSetupState {
     final count = data['applicationCount'] is int
         ? data['applicationCount'] as int
         : 0;
+    final selectionReady =
+        saved && count >= 1 && count <= 50 && data['selectionUsable'] == true;
     if (mode == RestrictionMode.native &&
         (data['restrictionMode'] != 'native' ||
-            (lockdown == LockdownState.locked &&
-                (!saved ||
-                    count < 1 ||
-                    count > 50 ||
-                    data['selectionUsable'] != true)))) {
+            (lockdown == LockdownState.locked && !selectionReady))) {
       lockdown = LockdownState.error;
     }
     return RestrictionSetupState(
@@ -69,7 +67,7 @@ class RestrictionSetupState {
           : AuthorizationStatus.unavailable,
       hasSavedSelection: saved,
       applicationCount: saved ? count : 0,
-      selectionUsable: saved && data['selectionUsable'] == true,
+      selectionUsable: selectionReady,
       mode: mode,
       lockdownState: lockdown,
       restrictionMessage:

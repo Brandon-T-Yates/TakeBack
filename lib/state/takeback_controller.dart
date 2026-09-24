@@ -43,6 +43,13 @@ class TakeBackController extends ChangeNotifier {
   bool get needsUnlock => lockdownState != LockdownState.unlocked;
   bool get canEditAllowedApps =>
       mode == RestrictionMode.prototype || !needsUnlock;
+  bool get allowlistReady =>
+      setup.selectionUsable &&
+      setup.applicationCount >= 1 &&
+      setup.applicationCount <= 50;
+  bool get canLockIn =>
+      mode == RestrictionMode.prototype ||
+      (authorization == AuthorizationStatus.authorized && allowlistReady);
 
   Future<void> initialize() => _perform(() async {
     _accepted = await _preferences.disclaimerAccepted;

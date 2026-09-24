@@ -92,6 +92,25 @@ void main() {
     }
   });
 
+  test('allowlist readiness requires 1–50 saved apps', () {
+    for (final count in [0, 1, 50, 51]) {
+      final parsed = RestrictionSetupState.fromNative({
+        ...state,
+        'authorization': 'authorized',
+        'hasSavedSelection': true,
+        'applicationCount': count,
+        'selectionUsable': true,
+      });
+      expect(parsed.hasSavedSelection, isTrue, reason: 'count $count');
+      expect(parsed.applicationCount, count, reason: 'count $count');
+      expect(
+        parsed.selectionUsable,
+        count >= 1 && count <= 50,
+        reason: 'count $count',
+      );
+    }
+  });
+
   test(
     'cancelled authorization never activates native or prototype restrictions',
     () async {
@@ -166,15 +185,19 @@ void main() {
     expect(find.text('Authorize Screen Time'), findsOneWidget);
     expect(controller.setup.selectionUsable, isFalse);
     await tapText(tester, 'Continue to Unbound');
-    await tapText(tester, 'LOCK IN');
-    expect(find.text('Before you lock in'), findsOneWidget);
-    await tapText(tester, 'Got it — Lock In');
+    expect(find.text('AUTHORIZE'), findsOneWidget);
+    expect(find.text('Authorize to lock in.'), findsOneWidget);
+    await tapText(tester, 'AUTHORIZE');
+    expect(find.text('CHOOSE APPS'), findsOneWidget);
+    await tapText(tester, 'CHOOSE APPS');
+    expect(find.text('Screen Time access is authorized.'), findsOneWidget);
+    pickerResult = 'selected';
+    await tapText(tester, 'Choose Allowed Apps');
+    expect(find.text('2 allowed apps saved'), findsOneWidget);
+    await tapText(tester, 'Done');
+    expect(find.text('LOCK IN'), findsOneWidget);
     expect(find.text('Prototype mode — no apps are blocked'), findsNothing);
     expect(controller.locked, isFalse);
-    expect(
-      find.text('Authorize Screen Time before locking in.'),
-      findsOneWidget,
-    );
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 }

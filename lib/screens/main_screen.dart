@@ -19,8 +19,26 @@ class _MainScreenState extends State<MainScreen> {
   bool _promptOpen = false;
   TakeBackController get controller => widget.controller;
 
+  Future<void> _openAllowedApps() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AllowedAppsScreen(controller: controller),
+      ),
+    );
+  }
+
   Future<void> _handleLockControl() async {
     if (_promptOpen || controller.busy) return;
+    if (controller.mode == RestrictionMode.native &&
+        !controller.needsUnlock &&
+        !controller.canLockIn) {
+      if (controller.authorization != AuthorizationStatus.authorized) {
+        await controller.authorize();
+      } else {
+        await _openAllowedApps();
+      }
+      return;
+    }
     if (controller.mode == RestrictionMode.native &&
         !controller.needsUnlock &&
         !controller.firstNativeLockSafetyAcknowledged) {
@@ -121,6 +139,18 @@ class _MainScreenState extends State<MainScreen> {
     final native = controller.mode == RestrictionMode.native;
     final status = controller.lockdownState;
     final needsUnlock = controller.needsUnlock;
+    final needsAuthorization =
+        native &&
+        !needsUnlock &&
+        controller.authorization != AuthorizationStatus.authorized;
+    final needsAllowlist = native && !needsUnlock && !controller.allowlistReady;
+    final actionLabel = needsUnlock
+        ? 'UNLOCK'
+        : needsAuthorization
+        ? 'AUTHORIZE'
+        : needsAllowlist
+        ? 'CHOOSE APPS'
+        : 'LOCK IN';
     return Scaffold(
       bottomNavigationBar: controller.mode == RestrictionMode.prototype
           ? const SafeArea(
@@ -168,10 +198,14 @@ class _MainScreenState extends State<MainScreen> {
                   ? native
                         ? 'Your app restriction policy is active.'
                         : 'Your prototype session is active.'
+                  : needsAuthorization
+                  ? 'Authorize to lock in.'
+                  : needsAllowlist
+                  ? 'Choose 1–50 apps to lock in.'
                   : 'A little intention goes a long way.',
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 36),
+            SizedBox(height: needsAuthorization || needsAllowlist ? 24 : 36),
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 280),
@@ -222,12 +256,16 @@ class _MainScreenState extends State<MainScreen> {
                         ),
                       ),
                       const SizedBox(height: 22),
-                      Text(
-                        needsUnlock ? 'UNLOCK' : 'LOCK IN',
-                        style: const TextStyle(
-                          fontSize: 25,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 2,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          actionLabel,
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontSize: 25,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 2,
+                          ),
                         ),
                       ),
                     ],
@@ -237,11 +275,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
             const SizedBox(height: 20),
             TextButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => AllowedAppsScreen(controller: controller),
-                ),
-              ),
+              onPressed: _openAllowedApps,
               icon: const Icon(Icons.apps_rounded, size: 19),
               label: const Text('Edit Allowed Apps'),
             ),

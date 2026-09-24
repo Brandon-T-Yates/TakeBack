@@ -50,6 +50,9 @@ void main() {
             case 'getSetupState':
               if (failRead) throw PlatformException(code: 'read_failed');
               return state;
+            case 'requestAuthorization':
+              state['authorization'] = 'authorized';
+              return null;
             case 'isLockdownEnabled':
               if (['checking', 'error'].contains(state['lockdownState'])) {
                 throw PlatformException(code: 'restriction_state_unknown');
@@ -231,10 +234,33 @@ void main() {
     });
     await tester.runAsync(sendSnapshot);
     await tester.pumpAndSettle();
-    expect(find.text('LOCK IN'), findsOneWidget);
+    expect(find.text('AUTHORIZE'), findsOneWidget);
+    expect(find.text('Authorize to lock in.'), findsOneWidget);
+    await tapText(tester, 'AUTHORIZE');
+    expect(find.text('CHOOSE APPS'), findsOneWidget);
+    await tapText(tester, 'CHOOSE APPS');
+    expect(find.text('Allowed Apps'), findsOneWidget);
+    expect(find.text('Choose Allowed Apps'), findsOneWidget);
     expect(find.text('LOCKED IN'), findsNothing);
     expect(c.mode, RestrictionMode.native);
     expect(memory.values[PreferencesStore.prototypeLockKey], isTrue);
+  });
+
+  testWidgets('invalid saved count routes Main to allowlist recovery', (
+    tester,
+  ) async {
+    state.addAll({'applicationCount': 51, 'selectionUsable': true});
+    final c = controller();
+    await tester.pumpWidget(TakeBackApp(controller: c));
+    await tester.pumpAndSettle();
+
+    expect(c.setup.hasSavedSelection, isTrue);
+    expect(c.allowlistReady, isFalse);
+    expect(find.text('CHOOSE APPS'), findsOneWidget);
+    expect(find.text('Choose 1–50 apps to lock in.'), findsOneWidget);
+    await tapText(tester, 'CHOOSE APPS');
+    expect(find.text('51 apps saved — choose 1–50'), findsOneWidget);
+    expect(calls, isNot(contains('toggleLockdown')));
   });
 
   testWidgets(
@@ -303,7 +329,7 @@ void main() {
       expect(calls, contains('disableLockdown'));
       expect(find.text('Ready to unlock?'), findsNothing);
       expect(calls, isNot(contains('enableLockdown')));
-      expect(find.text('LOCK IN'), findsOneWidget);
+      expect(find.text('AUTHORIZE'), findsOneWidget);
     },
   );
 

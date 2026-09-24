@@ -113,7 +113,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('settings launches support email and leaves policy disabled', (
+  testWidgets('settings launches support email and privacy policy', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -144,19 +144,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('support@tyler.yates.me'), findsOneWidget);
-    expect(find.text('Production URL not configured'), findsOneWidget);
+    expect(find.text('support@tyleryates.me'), findsOneWidget);
+    expect(find.text('View Privacy Policy'), findsOneWidget);
     expect(find.text('Version 1.2.3 (45)'), findsOneWidget);
     await tapText(tester, 'Support');
-    expect(launched, Uri.parse('mailto:support@tyler.yates.me'));
+    expect(launched, Uri.parse('mailto:support@tyleryates.me'));
 
-    final policyRow = tester.widget<InkWell>(
-      find.ancestor(
-        of: find.text('Privacy Policy'),
-        matching: find.byType(InkWell),
-      ),
+    await tapText(tester, 'Privacy Policy');
+    expect(
+      launched,
+      Uri.parse('https://tyleryates.me/unbound/privacy'),
     );
-    expect(policyRow.onTap, isNull);
   });
 
   testWidgets('allowed apps fits a compact iPhone without scrolling', (

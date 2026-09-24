@@ -209,6 +209,8 @@ class _AllowedAppsCard extends StatelessWidget {
           controller.setup.available
               ? controller.setup.selectionUsable
                     ? '${controller.setup.applicationCount} allowed apps saved'
+                    : controller.setup.hasSavedSelection
+                    ? '${controller.setup.applicationCount} apps saved — choose 1–50'
                     : 'No usable app selection saved'
               : Theme.of(context).platform == TargetPlatform.iOS
               ? 'App selection requires an iPhone'

@@ -1,11 +1,7 @@
-const supportEmail = 'support@tyler.yates.me';
+const supportEmail = 'support@tyleryates.me';
 
-// Set this to the final production URL before App Store submission.
-const String? privacyPolicyUrl = null;
+const privacyPolicyUrl = 'https://tyleryates.me/unbound/privacy';
 
 Uri get supportEmailUri => Uri(scheme: 'mailto', path: supportEmail);
 
-Uri? get privacyPolicyUri {
-  final value = privacyPolicyUrl;
-  return value == null ? null : Uri.tryParse(value);
-}
+Uri? get privacyPolicyUri => Uri.tryParse(privacyPolicyUrl);

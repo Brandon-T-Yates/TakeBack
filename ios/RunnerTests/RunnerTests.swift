@@ -45,14 +45,15 @@ class RunnerTests: XCTestCase {
     // A deliberately saved empty selection is valid; no fabricated Apple tokens.
     try context.store.save(FamilyActivitySelection())
     let savedData = try XCTUnwrap(context.defaults.data(forKey: AllowedAppsStore.selectionKey))
-    XCTAssertEqual(try context.snapshot()["selectionUsable"] as? Bool, true)
+    XCTAssertEqual(try context.snapshot()["selectionUsable"] as? Bool, false)
 
     try context.relaunch()
 
     let state = try context.snapshot()
     XCTAssertEqual(state["authorization"] as? String, "authorized")
     XCTAssertEqual(state["hasSavedSelection"] as? Bool, true)
-    XCTAssertEqual(state["selectionUsable"] as? Bool, true)
+    XCTAssertEqual(state["applicationCount"] as? Int, 0)
+    XCTAssertEqual(state["selectionUsable"] as? Bool, false)
     XCTAssertEqual(context.defaults.data(forKey: AllowedAppsStore.selectionKey), savedData)
   }
 
@@ -79,7 +80,9 @@ class RunnerTests: XCTestCase {
       context.status = .approved
       context.available = true
       try context.relaunch()
-      XCTAssertEqual(try context.snapshot()["selectionUsable"] as? Bool, true)
+      let restored = try context.snapshot()
+      XCTAssertEqual(restored["hasSavedSelection"] as? Bool, true)
+      XCTAssertEqual(restored["selectionUsable"] as? Bool, false)
       XCTAssertEqual(context.defaults.data(forKey: AllowedAppsStore.selectionKey), savedData)
     }
   }
@@ -137,7 +140,8 @@ class RunnerTests: XCTestCase {
       await fulfillment(of: [changed], timeout: 2)
       context.messenger.onMethodCall = nil
 
-      XCTAssertEqual(try XCTUnwrap(state)["selectionUsable"] as? Bool, status == .approved)
+      XCTAssertEqual(try XCTUnwrap(state)["selectionUsable"] as? Bool, false)
+      XCTAssertEqual(try XCTUnwrap(state)["hasSavedSelection"] as? Bool, status == .approved)
       if status == .denied {
         XCTAssertNil(context.defaults.object(forKey: AllowedAppsStore.selectionKey))
       } else {

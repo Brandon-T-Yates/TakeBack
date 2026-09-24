@@ -13,7 +13,10 @@ class IosAppRestrictionService implements AppRestrictionService {
   }) : _channel = channel {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'setupChanged' && !_changes.isClosed) {
-        _changes.add(_parse(Map<Object?, Object?>.from(call.arguments as Map)));
+        final state = _accept(
+          Map<Object?, Object?>.from(call.arguments as Map),
+        );
+        if (state != null) _changes.add(state);
       }
     });
   }
@@ -23,13 +26,24 @@ class IosAppRestrictionService implements AppRestrictionService {
   final _changes = StreamController<RestrictionSetupState>.broadcast();
   RestrictionMode _mode = RestrictionMode.native;
   bool _capabilityKnown = false;
+  RestrictionSetupState? _latestState;
+  int? _latestRevision;
 
-  RestrictionSetupState _parse(Map<Object?, Object?> data) {
+  RestrictionSetupState? _accept(Map<Object?, Object?> data) {
     final state = RestrictionSetupState.fromNative(data);
+    final revision = state.revision;
+    if (_latestRevision case final latest?) {
+      if (revision == null || revision <= latest) return null;
+    }
     _mode = state.mode;
     _capabilityKnown = true;
+    _latestState = state;
+    if (revision != null) _latestRevision = revision;
     return state;
   }
+
+  RestrictionSetupState _reconcile(Map<Object?, Object?> data) =>
+      _accept(data) ?? _latestState!;
 
   @override
   RestrictionMode get mode => _mode;
@@ -40,7 +54,7 @@ class IosAppRestrictionService implements AppRestrictionService {
     final data = await _channel.invokeMapMethod<Object?, Object?>(
       'getSetupState',
     );
-    return _parse(data ?? {});
+    return _reconcile(data ?? {});
   }
 
   @override
@@ -88,8 +102,8 @@ class IosAppRestrictionService implements AppRestrictionService {
     if (!_capabilityKnown && method != 'disableLockdown') await getSetupState();
     if (mode == RestrictionMode.prototype) return prototype();
     final data = await _channel.invokeMapMethod<Object?, Object?>(method);
-    final state = _parse(data ?? {});
-    if (!_changes.isClosed) _changes.add(state);
+    final state = _accept(data ?? {});
+    if (state != null && !_changes.isClosed) _changes.add(state);
   }
 
   @override

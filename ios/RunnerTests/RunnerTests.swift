@@ -149,6 +149,29 @@ class RunnerTests: XCTestCase {
       }
     }
   }
+
+  @MainActor
+  func testBridgeUsesOneMonotonicRevisionDomainForRepliesAndEvents() async throws {
+    let context = try PersistenceContext()
+    defer { context.cleanUp() }
+    let first = try XCTUnwrap(try context.snapshot()["revision"] as? Int)
+    let changed = expectation(description: "Scene activation emits revisioned setupChanged")
+    var eventRevision: Int?
+    context.messenger.onMethodCall = { call in
+      guard call.method == "setupChanged" else { return }
+      eventRevision = (call.arguments as? [String: Any])?["revision"] as? Int
+      changed.fulfill()
+    }
+
+    NotificationCenter.default.post(name: UIScene.didActivateNotification, object: nil)
+    await fulfillment(of: [changed], timeout: 2)
+    context.messenger.onMethodCall = nil
+    let event = try XCTUnwrap(eventRevision)
+    let final = try XCTUnwrap(try context.snapshot()["revision"] as? Int)
+
+    XCTAssertLessThan(first, event)
+    XCTAssertLessThan(event, final)
+  }
 }
 
 @MainActor

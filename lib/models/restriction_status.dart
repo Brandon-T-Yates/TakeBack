@@ -18,6 +18,7 @@ class RestrictionSetupState {
     this.mode = RestrictionMode.prototype,
     this.lockdownState = LockdownState.unlocked,
     this.restrictionMessage,
+    this.revision,
   });
 
   final bool available;
@@ -28,6 +29,7 @@ class RestrictionSetupState {
   final RestrictionMode mode;
   final LockdownState lockdownState;
   final String? restrictionMessage;
+  final int? revision;
 
   factory RestrictionSetupState.fromNative(Map<Object?, Object?> data) {
     final authorization = switch (data['authorization']) {
@@ -75,6 +77,7 @@ class RestrictionSetupState {
           (lockdown == LockdownState.error
               ? 'Could not confirm Unbound’s restrictions. Tap UNLOCK to retry clearing them.'
               : null),
+      revision: data['revision'] is int ? data['revision'] as int : null,
     );
   }
 }

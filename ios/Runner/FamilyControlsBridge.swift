@@ -21,6 +21,7 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
   private var pickerController: UIViewController?
   private var pickerResult: FlutterResult?
   private var requestingAuthorization = false
+  private var snapshotRevision = 0
 
   init(
     messenger: FlutterBinaryMessenger,
@@ -87,26 +88,32 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
   }
 
   private func snapshot(denied: Bool = false) -> [String: Any] {
-    if let coordinator { return coordinator.snapshot(denied: denied).metadata }
-    let status = denied ? "denied" : authorization
-    // Startup can report notDetermined before the system restores approval.
-    // Only an explicit denial invalidates otherwise valid persisted tokens.
-    if status == "denied" { store.clear() }
-    let savedSelection = store.load()
-    let selection = status == "authorized" ? savedSelection : nil
-    let count = selection?.applicationTokens.count ?? 0
-    let selectionUsable = selection != nil && (1...50).contains(count)
-    let restriction = restrictions?.reconcile(authorization: status) ?? RestrictionSnapshot(state: .unlocked)
-    var state: [String: Any] = [
-      "available": available,
-      "authorization": status,
-      "hasSavedSelection": selection != nil,
-      "applicationCount": count,
-      "selectionUsable": selectionUsable,
-      "restrictionMode": restrictions == nil ? "prototype" : "native",
-      "lockdownState": restriction.state.rawValue,
-    ]
-    if let message = restriction.message { state["restrictionMessage"] = message }
+    var state: [String: Any]
+    if let coordinator {
+      state = coordinator.snapshot(denied: denied).metadata
+    } else {
+      let status = denied ? "denied" : authorization
+      // Startup can report notDetermined before the system restores approval.
+      // Only an explicit denial invalidates otherwise valid persisted tokens.
+      if status == "denied" { store.clear() }
+      let savedSelection = store.load()
+      let selection = status == "authorized" ? savedSelection : nil
+      let count = selection?.applicationTokens.count ?? 0
+      let selectionUsable = selection != nil && (1...50).contains(count)
+      let restriction = restrictions?.reconcile(authorization: status) ?? RestrictionSnapshot(state: .unlocked)
+      state = [
+        "available": available,
+        "authorization": status,
+        "hasSavedSelection": selection != nil,
+        "applicationCount": count,
+        "selectionUsable": selectionUsable,
+        "restrictionMode": restrictions == nil ? "prototype" : "native",
+        "lockdownState": restriction.state.rawValue,
+      ]
+      if let message = restriction.message { state["restrictionMessage"] = message }
+    }
+    snapshotRevision += 1
+    state["revision"] = snapshotRevision
     return state
   }
 

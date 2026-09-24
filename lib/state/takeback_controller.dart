@@ -15,6 +15,10 @@ class TakeBackController extends ChangeNotifier {
   }) : _preferences = preferences,
        _restrictions = restrictions {
     _subscription = restrictions.setupChanges.listen((state) {
+      if (_supersedesOperationError(state)) {
+        error = null;
+        _errorRevision = null;
+      }
       _applySetup(state);
       if (!_disposed) notifyListeners();
     });
@@ -34,6 +38,7 @@ class TakeBackController extends ChangeNotifier {
   bool _accepted = false;
   bool _disposed = false;
   bool _refreshPending = false;
+  int? _errorRevision;
   late final StreamSubscription<RestrictionSetupState> _subscription;
 
   RestrictionMode get mode => _restrictions.mode;
@@ -134,6 +139,13 @@ class TakeBackController extends ChangeNotifier {
     }
   }
 
+  bool _supersedesOperationError(RestrictionSetupState state) {
+    if (error == null) return false;
+    final errorRevision = _errorRevision;
+    return errorRevision == null ||
+        (state.revision != null && state.revision! > errorRevision);
+  }
+
   Future<void> refreshSetup() async {
     if (busy) {
       _refreshPending = true;
@@ -187,6 +199,7 @@ class TakeBackController extends ChangeNotifier {
     if (busy || _disposed) return;
     busy = true;
     error = null;
+    _errorRevision = null;
     notifyListeners();
     try {
       await action();
@@ -198,8 +211,10 @@ class TakeBackController extends ChangeNotifier {
       error =
           exception.message ??
           'Screen Time setup could not be completed. Please try again.';
+      _errorRevision = setup.revision;
     } catch (_) {
       error = 'Couldn’t save or load your preferences. Please try again.';
+      _errorRevision = setup.revision;
     } finally {
       busy = false;
       if (!_disposed) notifyListeners();

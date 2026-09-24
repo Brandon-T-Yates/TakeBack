@@ -224,24 +224,34 @@ void main() {
     },
   );
 
-  test('late setupChanged can regress a newer controller snapshot', () async {
-    final c = controller();
-    await c.initialize();
-    final stale = Map<String, Object>.from(state);
+  test(
+    'late setupChanged cannot regress a newer controller snapshot',
+    () async {
+      final c = controller();
+      await c.initialize();
+      final stale = Map<String, Object>.from(state)..['revision'] = 1;
 
-    state['lockdownState'] = 'locked';
-    await c.refreshSetup();
-    expect(c.lockdownState, LockdownState.locked);
+      state.addAll({'lockdownState': 'locked', 'revision': 2});
+      await c.refreshSetup();
+      expect(c.lockdownState, LockdownState.locked);
 
-    await sendSnapshot(stale);
-    expect(c.lockdownState, LockdownState.unlocked);
-    expect(calls.where((call) => call == 'getSetupState'), hasLength(2));
-    c.dispose();
-  });
+      await sendSnapshot(stale);
+      expect(c.lockdownState, LockdownState.locked);
+      final unversioned = Map<String, Object>.from(stale)..remove('revision');
+      await sendSnapshot(unversioned);
+      expect(c.lockdownState, LockdownState.locked);
+
+      await sendSnapshot({...stale, 'revision': 3});
+      expect(c.lockdownState, LockdownState.unlocked);
+      expect(calls.where((call) => call == 'getSetupState'), hasLength(2));
+      c.dispose();
+    },
+  );
 
   test(
-    'successful setupChanged leaves an earlier operation error visible',
+    'only a newer successful setupChanged clears an operation error',
     () async {
+      state['revision'] = 10;
       final c = controller();
       await c.initialize();
       operationError = PlatformException(
@@ -253,9 +263,12 @@ void main() {
       expect(c.error, 'Earlier lock attempt failed.');
       operationError = null;
 
-      await sendSnapshot();
-      expect(c.lockdownState, LockdownState.unlocked);
+      await sendSnapshot({...state, 'revision': 9});
       expect(c.error, 'Earlier lock attempt failed.');
+
+      await sendSnapshot({...state, 'revision': 11});
+      expect(c.lockdownState, LockdownState.unlocked);
+      expect(c.error, isNull);
       c.dispose();
     },
   );

@@ -104,6 +104,36 @@ class _AllowedAppsBody extends StatelessWidget {
           child: Text(onboarding ? 'Continue to Unbound' : 'Done'),
         );
 
+        if (MediaQuery.textScalerOf(context).scale(1) > 1.3) {
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
+              verticalPadding,
+              horizontalPadding,
+              verticalPadding,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    intro,
+                    SizedBox(height: sectionGap),
+                    card,
+                    SizedBox(height: sectionGap),
+                    if (controller.mode == RestrictionMode.prototype)
+                      const PrototypeNotice(),
+                    SizedBox(height: contentGap),
+                    ErrorNotice(controller.error),
+                    action,
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
         return Padding(
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
@@ -197,7 +227,9 @@ class _AllowedAppsCard extends StatelessWidget {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.apps_rounded, size: 42, color: muted),
+        const ExcludeSemantics(
+          child: Icon(Icons.apps_rounded, size: 42, color: muted),
+        ),
         SizedBox(
           height: tight
               ? 4

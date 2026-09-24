@@ -168,26 +168,38 @@ class _SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+    label: '$title, $subtitle',
     button: onTap != null,
     enabled: onTap != null,
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title),
-                  const SizedBox(height: 3),
-                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-                ],
+    onTap: onTap,
+    excludeSemantics: true,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (onTap != null) const Icon(Icons.open_in_new_rounded, size: 18),
-          ],
+              if (onTap != null)
+                const ExcludeSemantics(
+                  child: Icon(Icons.open_in_new_rounded, size: 18),
+                ),
+            ],
+          ),
         ),
       ),
     ),

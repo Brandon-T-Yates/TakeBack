@@ -25,7 +25,9 @@ class PermissionScreen extends StatelessWidget {
             const StepLabel('02 / 03 · PERMISSIONS'),
             const Spacer(),
             const SizedBox(height: 36),
-            const Icon(Icons.tune_rounded, size: 56, color: ink),
+            const ExcludeSemantics(
+              child: Icon(Icons.tune_rounded, size: 56, color: ink),
+            ),
             const SizedBox(height: 28),
             Text(
               'Your focus.\nYour permission.',

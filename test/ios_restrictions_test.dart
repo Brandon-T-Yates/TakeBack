@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:takeback/app.dart';
@@ -14,6 +16,22 @@ import 'support.dart';
 import 'widget_test.dart' show tapText;
 
 const channel = MethodChannel('takeback/family_controls');
+
+void expectMainControlSemantics(
+  WidgetTester tester, {
+  required String label,
+  required String hint,
+}) {
+  final node = tester.getSemantics(find.byType(FilledButton).first);
+  final labeledControl = find.bySemanticsLabel(label);
+  expect(labeledControl, findsOneWidget);
+  expect(tester.getSemantics(labeledControl).id, node.id);
+  expect(node.label, label);
+  expect(node.hint, hint);
+  expect(node.flagsCollection.isButton, isTrue);
+  expect(node.flagsCollection.isEnabled, Tristate.isTrue);
+  expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -209,13 +227,24 @@ void main() {
   testWidgets('native lock UI, picker guard, and revocation notification', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     final c = controller();
     await tester.pumpWidget(TakeBackApp(controller: c));
     await tester.pumpAndSettle();
     expect(find.text('LOCK IN'), findsOneWidget);
+    expectMainControlSemantics(
+      tester,
+      label: 'Lock in, currently unlocked',
+      hint: 'Restricts apps outside your allowed list',
+    );
     expect(find.text('Prototype mode — no apps are blocked'), findsNothing);
     await tapText(tester, 'LOCK IN');
     expect(find.text('UNLOCK'), findsOneWidget);
+    expectMainControlSemantics(
+      tester,
+      label: 'Unlock, currently locked',
+      hint: 'Opens unlock options',
+    );
     expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
     expect(calls.where((call) => call == 'toggleLockdown'), hasLength(1));
     expect(find.text('Ready to unlock?'), findsNothing);
@@ -235,6 +264,11 @@ void main() {
     await tester.runAsync(sendSnapshot);
     await tester.pumpAndSettle();
     expect(find.text('AUTHORIZE'), findsOneWidget);
+    expectMainControlSemantics(
+      tester,
+      label: 'Authorize Screen Time',
+      hint: 'Requests Screen Time access',
+    );
     expect(find.text('Authorize to lock in.'), findsOneWidget);
     await tapText(tester, 'AUTHORIZE');
     expect(find.text('CHOOSE APPS'), findsOneWidget);
@@ -244,11 +278,13 @@ void main() {
     expect(find.text('LOCKED IN'), findsNothing);
     expect(c.mode, RestrictionMode.native);
     expect(memory.values[PreferencesStore.prototypeLockKey], isTrue);
+    semantics.dispose();
   });
 
   testWidgets('invalid saved count routes Main to allowlist recovery', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     state.addAll({'applicationCount': 51, 'selectionUsable': true});
     final c = controller();
     await tester.pumpWidget(TakeBackApp(controller: c));
@@ -257,10 +293,16 @@ void main() {
     expect(c.setup.hasSavedSelection, isTrue);
     expect(c.allowlistReady, isFalse);
     expect(find.text('CHOOSE APPS'), findsOneWidget);
+    expectMainControlSemantics(
+      tester,
+      label: 'Choose allowed apps',
+      hint: 'Opens allowed apps',
+    );
     expect(find.text('Choose 1–50 apps to lock in.'), findsOneWidget);
     await tapText(tester, 'CHOOSE APPS');
     expect(find.text('51 apps saved — choose 1–50'), findsOneWidget);
     expect(calls, isNot(contains('toggleLockdown')));
+    semantics.dispose();
   });
 
   testWidgets(
@@ -308,9 +350,40 @@ void main() {
     },
   );
 
+  testWidgets('native lock dialogs remain reachable with large text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    memory.values.remove(PreferencesStore.firstNativeLockSafetyAcknowledgedKey);
+    final c = controller();
+    await tester.pumpWidget(TakeBackApp(controller: c));
+    await tester.pumpAndSettle();
+
+    await tapText(tester, 'LOCK IN');
+    final confirm = find.text('Got it — Lock In');
+    await tester.ensureVisible(confirm);
+    await tester.pumpAndSettle();
+    expect(confirm.hitTestable(), findsOneWidget);
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+
+    await tapText(tester, 'UNLOCK');
+    final unlock = find.text('Unlock');
+    await tester.ensureVisible(unlock);
+    await tester.pumpAndSettle();
+    expect(unlock.hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'checking at startup keeps main screen and explicit unlock available',
     (tester) async {
+      final semantics = tester.ensureSemantics();
       state.addAll({
         'authorization': 'notDetermined',
         'lockdownState': 'checking',
@@ -325,17 +398,24 @@ void main() {
       expect(find.text('LOCKED IN'), findsNothing);
       expect(find.text('UNLOCKED'), findsNothing);
       expect(find.byIcon(Icons.help), findsOneWidget);
+      expectMainControlSemantics(
+        tester,
+        label: 'Unlock, restriction state unconfirmed',
+        hint: 'Attempts to clear restrictions',
+      );
       await tapText(tester, 'UNLOCK');
       expect(calls, contains('disableLockdown'));
       expect(find.text('Ready to unlock?'), findsNothing);
       expect(calls, isNot(contains('enableLockdown')));
       expect(find.text('AUTHORIZE'), findsOneWidget);
+      semantics.dispose();
     },
   );
 
   testWidgets(
     'failed activation and failed clearing never show false success',
     (tester) async {
+      final semantics = tester.ensureSemantics();
       final c = controller();
       await tester.pumpWidget(TakeBackApp(controller: c));
       await tester.pumpAndSettle();
@@ -356,6 +436,11 @@ void main() {
       );
       await tester.runAsync(sendSnapshot);
       await tester.pumpAndSettle();
+      expectMainControlSemantics(
+        tester,
+        label: 'Unlock, restriction state unconfirmed',
+        hint: 'Attempts to clear restrictions',
+      );
       await tapText(tester, 'UNLOCK');
       expect(c.lockdownState, LockdownState.error);
       expect(find.text('UNLOCKED'), findsNothing);
@@ -365,6 +450,7 @@ void main() {
       await tapText(tester, 'UNLOCK');
       expect(c.lockdownState, LockdownState.unlocked);
       expect(calls.where((call) => call == 'disableLockdown'), hasLength(2));
+      semantics.dispose();
     },
   );
 

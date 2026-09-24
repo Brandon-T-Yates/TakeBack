@@ -29,13 +29,16 @@ class StepLabel extends StatelessWidget {
   const StepLabel(this.text, {super.key});
   final String text;
   @override
-  Widget build(BuildContext context) => Text(
-    text,
-    style: const TextStyle(
-      fontSize: 11,
-      fontWeight: FontWeight.w700,
-      letterSpacing: 2,
-      color: muted,
+  Widget build(BuildContext context) => Semantics(
+    header: true,
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 2,
+        color: muted,
+      ),
     ),
   );
 }

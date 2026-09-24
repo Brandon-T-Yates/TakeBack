@@ -407,6 +407,41 @@ final class RestrictionPolicyTests: XCTestCase {
     XCTAssertEqual(restrictions.enableCount, 0)
   }
 
+  func testAuthorizationChangeRevokesOpenPickerExactlyOnce() async throws {
+    let messenger = TestBinaryMessenger()
+    let restrictions = StubRestrictions()
+    let parent = NonPresentingViewController()
+    var authorization = AuthorizationStatus.approved
+    let bridge = FamilyControlsBridge(messenger: messenger, available: true,
+      authorizationStatus: { authorization }, restrictions: restrictions, presenter: { parent })
+    defer { withExtendedLifetime(bridge) {} }
+    let handler = try XCTUnwrap(messenger.handler)
+    let codec = FlutterStandardMethodCodec.sharedInstance()
+    var pickerReplies = 0
+    var pickerReply: Data?
+    handler(codec.encode(FlutterMethodCall(methodName: "selectAllowedApps", arguments: nil))) {
+      pickerReplies += 1
+      pickerReply = $0
+    }
+    XCTAssertTrue(parent.pickerPresented)
+    XCTAssertEqual(pickerReplies, 0)
+
+    let changed = expectation(description: "Each authorization refresh emits setupChanged")
+    changed.expectedFulfillmentCount = 2
+    messenger.onMethodCall = { call in
+      if call.method == "setupChanged" { changed.fulfill() }
+    }
+    authorization = .denied
+    NotificationCenter.default.post(name: UIScene.didActivateNotification, object: nil)
+    NotificationCenter.default.post(name: UIScene.didActivateNotification, object: nil)
+    await fulfillment(of: [changed], timeout: 2)
+
+    XCTAssertEqual(pickerReplies, 1)
+    let error = codec.decodeEnvelope(try XCTUnwrap(pickerReply)) as? FlutterError
+    XCTAssertEqual(error?.code, "authorization_revoked")
+    XCTAssertEqual(restrictions.state, .unlocked)
+  }
+
   func testBridgeGuardsPickerAndUsesUnlockForUncertainToggle() throws {
     let messenger = TestBinaryMessenger()
     let restrictions = StubRestrictions()

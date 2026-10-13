@@ -169,14 +169,13 @@ void main() {
       await controller.initialize();
       pickerError = PlatformException(
         code: 'selection_limit',
-        message:
-            'Unbound supports up to 50 allowed apps. Choose fewer apps to save.',
+        message: 'Unbound supports up to 50 allowed apps.',
       );
       await controller.chooseAllowedApps();
       expect(controller.takeEphemeralNotice(), isNull);
       expect(
         controller.error,
-        'Unbound supports up to 50 allowed apps. Choose fewer apps to save.',
+        'Unbound supports up to 50 allowed apps.',
       );
       expect(controller.setup.applicationCount, 2);
       expect(controller.setup.selectionUsable, isTrue);

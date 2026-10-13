@@ -16,7 +16,7 @@ final class AllowedAppsStore {
         return "This selection can't be saved. Your previous allowed apps are unchanged. "
           + "Choose individual apps only."
       case .selectionLimit:
-        return "Unbound supports up to 50 allowed apps. Choose fewer apps to save."
+        return "Unbound supports up to 50 allowed apps."
       }
     }
 

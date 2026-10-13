@@ -244,28 +244,34 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     }
     let picker = AllowedAppsPicker(
       selection: initialSelection,
-      save: { [weak self] selection in
-        guard let self, self.pickerResult != nil else { return }
+      save: { [weak self] selection -> AllowedAppsPickerSaveResult in
+        guard let self, self.pickerResult != nil else { return .completed }
         guard self.authorization == "authorized" else {
           self.authorizationChanged()
-          return
+          return .completed
         }
         do {
           if let coordinator = self.coordinator { try coordinator.saveSelection(selection) }
           else { try self.store.save(selection) }
         } catch let error as AllowedAppsStore.SelectionError {
-          self.finishPicker(FlutterError(
-            code: error.flutterErrorCode,
-            message: error.localizedDescription,
-            details: nil
-          ))
-          return
+          switch error {
+          case .selectionLimit:
+            return .limitExceeded
+          case .emptySelection:
+            self.finishPicker(FlutterError(
+              code: error.flutterErrorCode,
+              message: error.localizedDescription,
+              details: nil
+            ))
+            return .completed
+          }
         } catch {
           self.finishPicker(self.setupError(error))
-          return
+          return .completed
         }
         self.channel.invokeMethod("setupChanged", arguments: self.snapshot())
         self.finishPicker("selected")
+        return .completed
       },
       cancel: { [weak self] in self?.finishPicker("cancelled") }
     )

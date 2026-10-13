@@ -295,8 +295,7 @@ class _AllowedAppsCard extends StatelessWidget {
         ),
         Text(
           controller.setup.available
-              ? 'Select individual apps only. Expand categories to choose apps; '
-                    'category and website selections cannot be saved. '
+              ? 'Categories save as the apps inside them. Websites aren\'t saved. '
                     'You can review your saved apps in the native picker.'
               : Theme.of(context).platform == TargetPlatform.iOS
               ? 'Use a provisioned physical iPhone to authorize Screen Time '

@@ -32,6 +32,7 @@ class TakeBackController extends ChangeNotifier {
   bool locked = false;
   bool firstNativeLockSafetyAcknowledged = false;
   String? error;
+  String? ephemeralNotice;
   RestrictionSetupState setup = const RestrictionSetupState();
   AuthorizationStatus get authorization => setup.authorization;
   AppSelectionResult selection = AppSelectionResult.unavailable;
@@ -55,6 +56,12 @@ class TakeBackController extends ChangeNotifier {
   bool get canLockIn =>
       mode == RestrictionMode.prototype ||
       (authorization == AuthorizationStatus.authorized && allowlistReady);
+
+  String? takeEphemeralNotice() {
+    final notice = ephemeralNotice;
+    ephemeralNotice = null;
+    return notice;
+  }
 
   Future<void> initialize() => _perform(() async {
     _accepted = await _preferences.disclaimerAccepted;
@@ -208,6 +215,10 @@ class TakeBackController extends ChangeNotifier {
         await _readSetup();
       }
     } on PlatformException catch (exception) {
+      if (exception.code == 'unsupported_selection') {
+        ephemeralNotice = 'No changes saved.';
+        return;
+      }
       error =
           exception.message ??
           'Screen Time setup could not be completed. Please try again.';

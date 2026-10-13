@@ -6,11 +6,25 @@ final class AllowedAppsStore {
   static let selectionKey = "takeback.ios.allowedApplications.v1"
   private let persistence: NativePersistence
 
-  enum SelectionError: LocalizedError {
-    case unsupportedSelection
+  enum SelectionError: LocalizedError, Equatable {
+    case emptySelection
+    case selectionLimit
+
     var errorDescription: String? {
-      "Only individual apps are supported. Deselect categories and websites, "
-        + "then expand categories to choose individual apps. Your previous allowlist has not changed."
+      switch self {
+      case .emptySelection:
+        return "This selection can't be saved. Your previous allowed apps are unchanged. "
+          + "Choose individual apps only."
+      case .selectionLimit:
+        return "Unbound supports up to 50 allowed apps. Choose fewer apps to save."
+      }
+    }
+
+    var flutterErrorCode: String {
+      switch self {
+      case .emptySelection: return "unsupported_selection"
+      case .selectionLimit: return "selection_limit"
+      }
     }
   }
 
@@ -21,24 +35,36 @@ final class AllowedAppsStore {
   init(persistence: NativePersistence) { self.persistence = persistence }
 
   static func decode(_ data: Data) throws -> FamilyActivitySelection {
-    try applicationsOnly(JSONDecoder().decode(FamilyActivitySelection.self, from: data))
+    try normalizedStoredSelection(JSONDecoder().decode(FamilyActivitySelection.self, from: data))
+  }
+
+  /// Picker binding: keep saved app tokens selected and prefer category expansion UX.
+  static func pickerInitialSelection(from saved: FamilyActivitySelection?) -> FamilyActivitySelection {
+    var selection = FamilyActivitySelection(includeEntireCategory: true)
+    selection.applicationTokens = saved?.applicationTokens ?? []
+    return selection
+  }
+
+  static func validateSaveApplicationCount(_ count: Int) throws {
+    guard count > 0 else { throw SelectionError.emptySelection }
+    guard count <= 50 else { throw SelectionError.selectionLimit }
   }
 
   static func applicationsOnly(_ selection: FamilyActivitySelection) throws -> FamilyActivitySelection {
-    try validateSelection(
-      includesEntireCategory: selection.includeEntireCategory,
-      categoryCount: selection.categoryTokens.count,
-      webDomainCount: selection.webDomainTokens.count
-    )
+    try validateSaveApplicationCount(selection.applicationTokens.count)
+    return strippedApplicationTokens(from: selection)
+  }
+
+  static func normalizedStoredSelection(_ selection: FamilyActivitySelection) throws -> FamilyActivitySelection {
+    let count = selection.applicationTokens.count
+    guard count <= 50 else { throw SelectionError.selectionLimit }
+    return strippedApplicationTokens(from: selection)
+  }
+
+  private static func strippedApplicationTokens(from selection: FamilyActivitySelection) -> FamilyActivitySelection {
     var apps = FamilyActivitySelection()
     apps.applicationTokens = selection.applicationTokens
     return apps
-  }
-
-  static func validateSelection(includesEntireCategory: Bool, categoryCount: Int, webDomainCount: Int) throws {
-    guard !includesEntireCategory, categoryCount == 0, webDomainCount == 0 else {
-      throw SelectionError.unsupportedSelection
-    }
   }
 
   func save(_ selection: FamilyActivitySelection) throws {

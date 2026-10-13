@@ -5,7 +5,7 @@ import '../theme.dart';
 import '../widgets/brand.dart';
 import '../widgets/notices.dart';
 
-class AllowedAppsScreen extends StatelessWidget {
+class AllowedAppsScreen extends StatefulWidget {
   const AllowedAppsScreen({
     super.key,
     required this.controller,
@@ -16,13 +16,45 @@ class AllowedAppsScreen extends StatelessWidget {
   final bool onboarding;
 
   @override
+  State<AllowedAppsScreen> createState() => _AllowedAppsScreenState();
+}
+
+class _AllowedAppsScreenState extends State<AllowedAppsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_showEphemeralNotice);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_showEphemeralNotice);
+    super.dispose();
+  }
+
+  void _showEphemeralNotice() {
+    final notice = widget.controller.takeEphemeralNotice();
+    if (notice == null || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(notice),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: controller,
+    listenable: widget.controller,
     builder: (context, _) => Scaffold(
       appBar: AppBar(
-        title: onboarding ? const Brand() : const Text('Allowed Apps'),
+        title: widget.onboarding ? const Brand() : const Text('Allowed Apps'),
       ),
-      body: _AllowedAppsBody(controller: controller, onboarding: onboarding),
+      body: _AllowedAppsBody(
+        controller: widget.controller,
+        onboarding: widget.onboarding,
+      ),
     ),
   );
 }
@@ -83,7 +115,7 @@ class _AllowedAppsBody extends StatelessWidget {
             SizedBox(height: contentGap),
             Text(
               controller.mode == RestrictionMode.native
-                  ? 'Choose 1–50 individual apps to keep accessible while locked in. Unlock before changing your allowed apps.'
+                  ? 'Select the apps you want available while locked in. Everything else will be restricted. Choose 1–50 apps. Unlock before changing your allowed apps.'
                   : 'Choose individual apps to ALLOW during a future lock session. No apps are blocked yet.',
               style: Theme.of(context).textTheme.bodyLarge,
             ),

@@ -1,25 +1,61 @@
 import FamilyControls
 import Flutter
+import ManagedSettings
 import UIKit
 import XCTest
 @testable import Runner
 
+private func installEmptyStoredAllowlist(defaults: UserDefaults) throws {
+  let data = try JSONEncoder().encode(FamilyActivitySelection())
+  defaults.set(data, forKey: AllowedAppsStore.selectionKey)
+}
+
 class RunnerTests: XCTestCase {
 
-  func testDefaultSelectionIsAppSpecific() throws {
-    let apps = try AllowedAppsStore.applicationsOnly(FamilyActivitySelection())
-    XCTAssertFalse(apps.includeEntireCategory)
-    XCTAssertTrue(apps.categoryTokens.isEmpty)
-    XCTAssertTrue(apps.webDomainTokens.isEmpty)
+  func testSaveRejectsEmptyApplicationSelection() {
+    XCTAssertThrowsError(try AllowedAppsStore.applicationsOnly(FamilyActivitySelection())) { error in
+      XCTAssertEqual(error as? AllowedAppsStore.SelectionError, .emptySelection)
+    }
   }
 
-  func testRejectsCategoriesWebsitesAndCategoryExpansion() {
-    XCTAssertThrowsError(try AllowedAppsStore.validateSelection(
-      includesEntireCategory: false, categoryCount: 1, webDomainCount: 0))
-    XCTAssertThrowsError(try AllowedAppsStore.validateSelection(
-      includesEntireCategory: false, categoryCount: 0, webDomainCount: 1))
-    XCTAssertThrowsError(try AllowedAppsStore.validateSelection(
-      includesEntireCategory: true, categoryCount: 0, webDomainCount: 0))
+  func testSaveApplicationCountBoundaries() throws {
+    for count in [1, 50] {
+      XCTAssertNoThrow(try AllowedAppsStore.validateSaveApplicationCount(count))
+    }
+    XCTAssertThrowsError(try AllowedAppsStore.validateSaveApplicationCount(0)) { error in
+      XCTAssertEqual(error as? AllowedAppsStore.SelectionError, .emptySelection)
+    }
+    XCTAssertThrowsError(try AllowedAppsStore.validateSaveApplicationCount(51)) { error in
+      XCTAssertEqual(error as? AllowedAppsStore.SelectionError, .selectionLimit)
+    }
+  }
+
+  func testDecodeStripsCategoryMetadataFromStoredBytes() throws {
+    let encoded = try JSONEncoder().encode(FamilyActivitySelection(includeEntireCategory: true))
+    let decoded = try AllowedAppsStore.decode(encoded)
+    XCTAssertFalse(decoded.includeEntireCategory)
+    XCTAssertTrue(decoded.categoryTokens.isEmpty)
+    XCTAssertTrue(decoded.webDomainTokens.isEmpty)
+  }
+
+  func testPickerInitialSelectionPreservesTokensAndSetsIncludeEntireCategory() throws {
+    let saved = try AllowedAppsStore.decode(try JSONEncoder().encode(FamilyActivitySelection()))
+    let initial = AllowedAppsStore.pickerInitialSelection(from: saved)
+    XCTAssertTrue(initial.includeEntireCategory)
+    XCTAssertEqual(initial.applicationTokens.count, 0)
+    XCTAssertTrue(AllowedAppsStore.pickerInitialSelection(from: nil).includeEntireCategory)
+  }
+
+  func testSaveRejectsFiftyOneApplicationsAtSaveTime() throws {
+    let suite = "takeback.tests.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    try installEmptyStoredAllowlist(defaults: defaults)
+    let savedData = defaults.data(forKey: AllowedAppsStore.selectionKey)
+    XCTAssertThrowsError(try AllowedAppsStore.validateSaveApplicationCount(51)) { error in
+      XCTAssertEqual(error as? AllowedAppsStore.SelectionError, .selectionLimit)
+    }
+    XCTAssertEqual(defaults.data(forKey: AllowedAppsStore.selectionKey), savedData)
   }
 
   func testRestoreClearAndRejectedSavePreservesPreviousSelection() throws {
@@ -28,10 +64,15 @@ class RunnerTests: XCTestCase {
     defer { defaults.removePersistentDomain(forName: suite) }
     let store = AllowedAppsStore(defaults: defaults)
     XCTAssertNil(store.load())
-    try store.save(FamilyActivitySelection())
+    try installEmptyStoredAllowlist(defaults: defaults)
     let savedData = defaults.data(forKey: AllowedAppsStore.selectionKey)
     XCTAssertNotNil(AllowedAppsStore(defaults: defaults).load())
-    XCTAssertThrowsError(try store.save(FamilyActivitySelection(includeEntireCategory: true)))
+    XCTAssertThrowsError(try store.save(FamilyActivitySelection())) { error in
+      XCTAssertEqual(error as? AllowedAppsStore.SelectionError, .emptySelection)
+    }
+    XCTAssertThrowsError(try store.save(FamilyActivitySelection(includeEntireCategory: true))) { error in
+      XCTAssertEqual(error as? AllowedAppsStore.SelectionError, .emptySelection)
+    }
     XCTAssertEqual(defaults.data(forKey: AllowedAppsStore.selectionKey), savedData)
     store.clear()
     XCTAssertNil(AllowedAppsStore(defaults: defaults).load())
@@ -43,7 +84,7 @@ class RunnerTests: XCTestCase {
     defer { context.cleanUp() }
     XCTAssertEqual(try context.snapshot()["selectionUsable"] as? Bool, false)
     // A deliberately saved empty selection is valid; no fabricated Apple tokens.
-    try context.store.save(FamilyActivitySelection())
+    try installEmptyStoredAllowlist(defaults: context.defaults)
     let savedData = try XCTUnwrap(context.defaults.data(forKey: AllowedAppsStore.selectionKey))
     XCTAssertEqual(try context.snapshot()["selectionUsable"] as? Bool, false)
 
@@ -62,7 +103,7 @@ class RunnerTests: XCTestCase {
     for unavailable in [false, true] {
       let context = try PersistenceContext()
       defer { context.cleanUp() }
-      try context.store.save(FamilyActivitySelection())
+      try installEmptyStoredAllowlist(defaults: context.defaults)
       let savedData = try XCTUnwrap(context.defaults.data(forKey: AllowedAppsStore.selectionKey))
       context.status = .notDetermined
       context.available = !unavailable
@@ -91,7 +132,7 @@ class RunnerTests: XCTestCase {
   func testDeniedAuthorizationClearsSelectionAcrossRelaunch() throws {
     let context = try PersistenceContext()
     defer { context.cleanUp() }
-    try context.store.save(FamilyActivitySelection())
+    try installEmptyStoredAllowlist(defaults: context.defaults)
     context.status = .denied
     try context.relaunch()
 
@@ -110,21 +151,32 @@ class RunnerTests: XCTestCase {
     let context = try PersistenceContext()
     defer { context.cleanUp() }
     context.status = .notDetermined
-    let unsupported = try JSONEncoder().encode(FamilyActivitySelection(includeEntireCategory: true))
-    for invalidValue in [Data("invalid JSON".utf8), unsupported, "wrong storage type"] as [Any] {
+    for invalidValue in [Data("invalid JSON".utf8), "wrong storage type"] as [Any] {
       context.defaults.set(invalidValue, forKey: AllowedAppsStore.selectionKey)
       let state = try context.snapshot()
       XCTAssertEqual(state["hasSavedSelection"] as? Bool, false)
       XCTAssertEqual(state["selectionUsable"] as? Bool, false)
       XCTAssertNil(context.defaults.object(forKey: AllowedAppsStore.selectionKey))
     }
+    let metadataOnly = try JSONEncoder().encode(FamilyActivitySelection(includeEntireCategory: true))
+    context.defaults.set(metadataOnly, forKey: AllowedAppsStore.selectionKey)
+    let loaded = try XCTUnwrap(context.store.load())
+    XCTAssertEqual(loaded.applicationTokens.count, 0)
+    XCTAssertFalse(loaded.includeEntireCategory)
+    XCTAssertNotNil(context.defaults.object(forKey: AllowedAppsStore.selectionKey))
+    context.status = .approved
+    try context.relaunch()
+    let restored = try context.snapshot()
+    XCTAssertEqual(restored["hasSavedSelection"] as? Bool, true)
+    XCTAssertEqual(restored["applicationCount"] as? Int, 0)
+    XCTAssertEqual(restored["selectionUsable"] as? Bool, false)
   }
 
   @MainActor
   func testSceneActivationRetainsRestoresAndRevokesSelection() async throws {
     let context = try PersistenceContext()
     defer { context.cleanUp() }
-    try context.store.save(FamilyActivitySelection())
+    try installEmptyStoredAllowlist(defaults: context.defaults)
     let savedData = try XCTUnwrap(context.defaults.data(forKey: AllowedAppsStore.selectionKey))
 
     for status in [AuthorizationStatus.notDetermined, .approved, .denied] {
@@ -239,6 +291,32 @@ private final class TestBinaryMessenger: NSObject, FlutterBinaryMessenger {
 
 @MainActor
 final class RestrictionPolicyTests: XCTestCase {
+  func testLockInAppliesSavedAppsAsKEEPAllowlistExceptions() throws {
+    let c = try RestrictionTestContext()
+    defer { c.cleanUp() }
+    c.selection = ["keep-only"]
+    try c.policy.enable(authorization: "authorized")
+    XCTAssertEqual(c.backend.applyCount, 1)
+    XCTAssertEqual(c.backend.policy, .allowlist(["keep-only"], active: true))
+    XCTAssertEqual(c.policy.reconcile(authorization: "authorized").state, .locked)
+  }
+
+  func testAllowlistShieldPolicyConfiguresAllExceptWithoutApplicationBlockList() throws {
+    let store = ManagedSettingsStore(named: .init("takeback.allowlist.test.\(UUID().uuidString)"))
+    defer { store.clearAllSettings() }
+    AllowlistShieldPolicy.apply(to: store, allowing: [])
+    XCTAssertFalse(AllowlistShieldPolicy.hasBlockingApplicationShieldList(store.shield))
+    XCTAssertFalse(AllowlistShieldPolicy.hasBlockingWebShieldList(store.shield))
+    XCTAssertNil(store.shield.applications)
+    guard case .all(except: let allowed) = store.shield.applicationCategories else {
+      return XCTFail("Expected KEEP policy applicationCategories = .all(except:)")
+    }
+    XCTAssertTrue(allowed.isEmpty)
+    if #available(iOS 26.5, *) {
+      XCTAssertTrue(store.isActive)
+    }
+  }
+
   func testActivationRequiresAuthorizationAndValidNonemptyBoundedSelection() throws {
     let c = try RestrictionTestContext()
     defer { c.cleanUp() }
@@ -390,7 +468,7 @@ final class RestrictionPolicyTests: XCTestCase {
     let c = try RestrictionTestContext()
     defer { c.cleanUp() }
     let store = AllowedAppsStore(defaults: c.defaults)
-    try store.save(FamilyActivitySelection())
+    try installEmptyStoredAllowlist(defaults: c.defaults)
     try c.policy.enable(authorization: "authorized")
     let messenger = TestBinaryMessenger()
     var authorization = AuthorizationStatus.approved
@@ -428,6 +506,39 @@ final class RestrictionPolicyTests: XCTestCase {
     handler(codec.encode(FlutterMethodCall(methodName: "enableLockdown", arguments: nil))) { reply = $0 }
     XCTAssertEqual((codec.decodeEnvelope(try XCTUnwrap(reply)) as? FlutterError)?.code, "busy")
     XCTAssertEqual(restrictions.enableCount, 0)
+  }
+
+  func testPickerSceneDeactivationInterruptsOpenPickerOnce() async throws {
+    let suite = "takeback.picker.interrupt.\(UUID().uuidString)"
+    let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let store = AllowedAppsStore(defaults: defaults)
+    try installEmptyStoredAllowlist(defaults: defaults)
+    let savedData = try XCTUnwrap(defaults.data(forKey: AllowedAppsStore.selectionKey))
+    let messenger = TestBinaryMessenger()
+    let restrictions = StubRestrictions()
+    let parent = NonPresentingViewController()
+    let bridge = FamilyControlsBridge(messenger: messenger, store: store, available: true,
+      authorizationStatus: { .approved }, restrictions: restrictions, presenter: { parent })
+    defer { withExtendedLifetime(bridge) {} }
+    let handler = try XCTUnwrap(messenger.handler)
+    let codec = FlutterStandardMethodCodec.sharedInstance()
+    let replied = expectation(description: "picker interrupted")
+    var pickerReplies = 0
+    var pickerReply: Data?
+    handler(codec.encode(FlutterMethodCall(methodName: "selectAllowedApps", arguments: nil))) {
+      pickerReplies += 1
+      pickerReply = $0
+      replied.fulfill()
+    }
+    XCTAssertTrue(parent.pickerPresented)
+    NotificationCenter.default.post(name: UIScene.willDeactivateNotification, object: nil)
+    await fulfillment(of: [replied], timeout: 2)
+    XCTAssertEqual(pickerReplies, 1)
+    XCTAssertEqual(codec.decodeEnvelope(try XCTUnwrap(pickerReply)) as? String, "cancelled")
+    NotificationCenter.default.post(name: UIScene.willDeactivateNotification, object: nil)
+    XCTAssertEqual(pickerReplies, 1)
+    XCTAssertEqual(defaults.data(forKey: AllowedAppsStore.selectionKey), savedData)
   }
 
   func testAuthorizationChangeRevokesOpenPickerExactlyOnce() async throws {

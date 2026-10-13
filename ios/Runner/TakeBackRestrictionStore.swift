@@ -143,15 +143,40 @@ final class RestrictionPolicy<Backend: RestrictionBackend>: RestrictionControlli
   }
 }
 
+/// KEEP / allowlist: `allowing` tokens stay accessible; all other apps are restricted.
+/// Never assign `shield.applications` to the allowlist — that property shields listed apps.
+enum AllowlistShieldPolicy {
+  static func apply(to store: ManagedSettingsStore, allowing: Set<ApplicationToken>) {
+    store.clearAllSettings()
+    store.shield.applications = nil
+    store.shield.webDomains = nil
+    store.shield.webDomainCategories = nil
+    store.shield.applicationCategories = .all(except: allowing)
+    if #available(iOS 26.5, *) { store.isActive = true }
+  }
+
+  static func hasBlockingApplicationShieldList(_ shield: ShieldSettings) -> Bool {
+    guard let applications = shield.applications else { return false }
+    return !applications.isEmpty
+  }
+
+  static func hasBlockingWebShieldList(_ shield: ShieldSettings) -> Bool {
+    if let webDomains = shield.webDomains, !webDomains.isEmpty { return true }
+    if let categories = shield.webDomainCategories, categories != .none { return true }
+    return false
+  }
+}
+
 @MainActor
 private final class ManagedSettingsBackend: RestrictionBackend {
   typealias Token = ApplicationToken
   private let store = ManagedSettingsStore(named: .init("takeback.lockdown"))
 
   func read() throws -> ShieldPolicy<ApplicationToken> {
-    guard store.shield.applications == nil, store.shield.webDomains == nil,
-          store.shield.webDomainCategories == nil else { return .unexpected }
-    guard let policy = store.shield.applicationCategories else { return .clear }
+    let shield = store.shield
+    guard !AllowlistShieldPolicy.hasBlockingApplicationShieldList(shield),
+          !AllowlistShieldPolicy.hasBlockingWebShieldList(shield) else { return .unexpected }
+    guard let policy = shield.applicationCategories else { return .clear }
     guard case let .all(except: tokens) = policy else { return .unexpected }
     // Availability is declared by the installed ManagedSettings SDK.
     if #available(iOS 26.5, *) {
@@ -161,8 +186,7 @@ private final class ManagedSettingsBackend: RestrictionBackend {
   }
 
   func apply(allowing tokens: Set<ApplicationToken>) throws {
-    store.shield.applicationCategories = .all(except: tokens)
-    if #available(iOS 26.5, *) { store.isActive = true }
+    AllowlistShieldPolicy.apply(to: store, allowing: tokens)
   }
 
   func clear() throws { store.clearAllSettings() }

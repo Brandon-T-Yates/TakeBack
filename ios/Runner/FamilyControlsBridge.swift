@@ -18,6 +18,8 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
   private var sharedObserver: NativeChangeObserver?
   private var authorizationObserver: AnyCancellable?
   private var foregroundObserver: AnyCancellable?
+  private var sceneDeactivateObserver: AnyCancellable?
+  private var backgroundObserver: AnyCancellable?
   private var pickerController: UIViewController?
   private var pickerResult: FlutterResult?
   private var requestingAuthorization = false
@@ -67,6 +69,12 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     foregroundObserver = NotificationCenter.default.publisher(for: UIScene.didActivateNotification)
       .receive(on: RunLoop.main)
       .sink { [weak self] _ in self?.authorizationChanged() }
+    sceneDeactivateObserver = NotificationCenter.default.publisher(for: UIScene.willDeactivateNotification)
+      .receive(on: RunLoop.main)
+      .sink { [weak self] _ in self?.handlePickerSceneDeactivation() }
+    backgroundObserver = NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)
+      .receive(on: RunLoop.main)
+      .sink { [weak self] _ in self?.handlePickerSceneDeactivation() }
   }
 
   private static var platformAvailable: Bool {
@@ -227,8 +235,13 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     let initialSelection: FamilyActivitySelection
     do {
       setupLease = try coordinator?.beginSetup(requireUnlocked: true)
-      initialSelection = try coordinator?.loadSelection() ?? store.load() ?? FamilyActivitySelection()
-    } catch { setupLease = nil; result(setupError(error)); return }
+      let persisted = try coordinator?.loadSelection() ?? store.load()
+      initialSelection = AllowedAppsStore.pickerInitialSelection(from: persisted)
+    } catch {
+      setupLease = nil
+      result(setupError(error))
+      return
+    }
     let picker = AllowedAppsPicker(
       selection: initialSelection,
       save: { [weak self] selection in
@@ -237,9 +250,20 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
           self.authorizationChanged()
           return
         }
-        // Validation throws into the visible picker message; nothing is saved.
-        if let coordinator = self.coordinator { try coordinator.saveSelection(selection) }
-        else { try self.store.save(selection) }
+        do {
+          if let coordinator = self.coordinator { try coordinator.saveSelection(selection) }
+          else { try self.store.save(selection) }
+        } catch let error as AllowedAppsStore.SelectionError {
+          self.finishPicker(FlutterError(
+            code: error.flutterErrorCode,
+            message: error.localizedDescription,
+            details: nil
+          ))
+          return
+        } catch {
+          self.finishPicker(self.setupError(error))
+          return
+        }
         self.channel.invokeMethod("setupChanged", arguments: self.snapshot())
         self.finishPicker("selected")
       },
@@ -251,6 +275,11 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     pickerController = host
     parent.present(host, animated: true)
     host.presentationController?.delegate = self
+  }
+
+  private func handlePickerSceneDeactivation() {
+    guard pickerResult != nil else { return }
+    finishPicker("cancelled")
   }
 
   private func finishPicker(_ value: Any?) {

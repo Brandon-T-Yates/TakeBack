@@ -18,6 +18,7 @@ void main() {
   late Map<String, Object> state;
   late String pickerResult;
   PlatformException? authorizationError;
+  PlatformException? pickerError;
 
   setUp(() {
     state = {
@@ -31,6 +32,7 @@ void main() {
     };
     pickerResult = 'selected';
     authorizationError = null;
+    pickerError = null;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
           switch (call.method) {
@@ -41,6 +43,7 @@ void main() {
               state['authorization'] = 'authorized';
               return null;
             case 'selectAllowedApps':
+              if (pickerError != null) throw pickerError!;
               if (pickerResult == 'selected') {
                 state.addAll({
                   'hasSavedSelection': true,
@@ -110,6 +113,76 @@ void main() {
       );
     }
   });
+
+  test('picker interruption keeps prior saved metadata visible', () async {
+    state.addAll({
+      'authorization': 'authorized',
+      'hasSavedSelection': true,
+      'applicationCount': 2,
+      'selectionUsable': true,
+    });
+    final controller = controllerFor(MemoryPreferences());
+    await controller.initialize();
+    pickerResult = 'cancelled';
+    await controller.chooseAllowedApps();
+    expect(controller.error, isNull);
+    expect(controller.setup.applicationCount, 2);
+    expect(controller.setup.selectionUsable, isTrue);
+    expect(controller.selection, AppSelectionResult.cancelled);
+    controller.dispose();
+  });
+
+  test(
+    'unsupported selection preserves saved apps and surfaces calm error',
+    () async {
+      state.addAll({
+        'authorization': 'authorized',
+        'hasSavedSelection': true,
+        'applicationCount': 2,
+        'selectionUsable': true,
+      });
+      final controller = controllerFor(MemoryPreferences());
+      await controller.initialize();
+      pickerError = PlatformException(
+        code: 'unsupported_selection',
+        message: 'unsupported',
+      );
+      await controller.chooseAllowedApps();
+      expect(controller.error, isNull);
+      expect(controller.takeEphemeralNotice(), 'No changes saved.');
+      expect(controller.setup.applicationCount, 2);
+      expect(controller.setup.selectionUsable, isTrue);
+      controller.dispose();
+    },
+  );
+
+  test(
+    'selection limit preserves saved apps and surfaces native message',
+    () async {
+      state.addAll({
+        'authorization': 'authorized',
+        'hasSavedSelection': true,
+        'applicationCount': 2,
+        'selectionUsable': true,
+      });
+      final controller = controllerFor(MemoryPreferences());
+      await controller.initialize();
+      pickerError = PlatformException(
+        code: 'selection_limit',
+        message:
+            'Unbound supports up to 50 allowed apps. Choose fewer apps to save.',
+      );
+      await controller.chooseAllowedApps();
+      expect(controller.takeEphemeralNotice(), isNull);
+      expect(
+        controller.error,
+        'Unbound supports up to 50 allowed apps. Choose fewer apps to save.',
+      );
+      expect(controller.setup.applicationCount, 2);
+      expect(controller.setup.selectionUsable, isTrue);
+      controller.dispose();
+    },
+  );
 
   test(
     'cancelled authorization never activates native or prototype restrictions',

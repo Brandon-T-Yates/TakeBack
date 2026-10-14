@@ -37,8 +37,8 @@ class PermissionScreen extends StatelessWidget {
             Text(
               isIOS
                   ? native
-                        ? 'Authorize Screen Time to choose the apps that remain accessible while locked in.'
-                        : 'Authorize Screen Time to choose the apps you want to allow in a future lock session.'
+                        ? 'Unbound uses Screen Time to choose the apps that remain accessible while locked in.'
+                        : 'Unbound uses Screen Time to choose the apps you want to allow in a future lock session.'
                   : 'Unbound will need device permissions to restrict apps. '
                         'Android blocking will follow the iOS implementation.',
               style: Theme.of(context).textTheme.bodyLarge,
@@ -68,7 +68,7 @@ class PermissionScreen extends StatelessWidget {
             if (available && !authorized) ...[
               FilledButton(
                 onPressed: controller.busy ? null : controller.authorize,
-                child: const Text('Authorize Screen Time'),
+                child: const Text('Continue'),
               ),
               const SizedBox(height: 8),
               TextButton(

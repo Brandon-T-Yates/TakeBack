@@ -312,14 +312,14 @@ void main() {
     });
     await tester.runAsync(sendSnapshot);
     await tester.pumpAndSettle();
-    expect(find.text('AUTHORIZE'), findsOneWidget);
+    expect(find.text('CONTINUE'), findsOneWidget);
     expectMainControlSemantics(
       tester,
-      label: 'Authorize Screen Time',
+      label: 'Continue',
       hint: 'Requests Screen Time access',
     );
     expect(find.text('Authorize to lock in.'), findsOneWidget);
-    await tapText(tester, 'AUTHORIZE');
+    await tapText(tester, 'CONTINUE');
     expect(find.text('CHOOSE APPS'), findsOneWidget);
     await tapText(tester, 'CHOOSE APPS');
     expect(find.text('Allowed Apps'), findsOneWidget);
@@ -456,7 +456,7 @@ void main() {
       expect(calls, contains('disableLockdown'));
       expect(find.text('Ready to unlock?'), findsNothing);
       expect(calls, isNot(contains('enableLockdown')));
-      expect(find.text('AUTHORIZE'), findsOneWidget);
+      expect(find.text('CONTINUE'), findsOneWidget);
       semantics.dispose();
     },
   );

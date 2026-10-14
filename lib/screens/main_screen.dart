@@ -150,7 +150,7 @@ class _MainScreenState extends State<MainScreen> {
     final actionLabel = needsUnlock
         ? 'UNLOCK'
         : needsAuthorization
-        ? 'AUTHORIZE'
+        ? 'CONTINUE'
         : needsAllowlist
         ? 'CHOOSE APPS'
         : 'LOCK IN';
@@ -159,7 +159,7 @@ class _MainScreenState extends State<MainScreen> {
               ? 'Unlock, currently locked'
               : 'Unlock, restriction state unconfirmed'
         : needsAuthorization
-        ? 'Authorize Screen Time'
+        ? 'Continue'
         : needsAllowlist
         ? 'Choose allowed apps'
         : 'Lock in, currently unlocked';

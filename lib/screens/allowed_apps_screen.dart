@@ -330,7 +330,7 @@ class _AllowedAppsCard extends StatelessWidget {
                   ? 'Unlock before editing apps'
                   : controller.authorization == AuthorizationStatus.authorized
                   ? 'Choose Allowed Apps'
-                  : 'Authorize Screen Time',
+                  : 'Continue',
             ),
           ),
         ],

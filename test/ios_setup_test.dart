@@ -219,7 +219,7 @@ void main() {
     final controller = controllerFor(memory);
     await tester.pumpWidget(TakeBackApp(controller: controller));
     await tester.pumpAndSettle();
-    await tapText(tester, 'Authorize Screen Time');
+    await tapText(tester, 'Continue');
     expect(find.text('Screen Time access is authorized.'), findsOneWidget);
     await tapText(tester, 'Continue');
     await tapText(tester, 'Choose Allowed Apps');
@@ -254,12 +254,12 @@ void main() {
     await tester.runAsync(() => delivered.future);
     await tester.pumpAndSettle();
     expect(find.text('No usable app selection saved'), findsOneWidget);
-    expect(find.text('Authorize Screen Time'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
     expect(controller.setup.selectionUsable, isFalse);
     await tapText(tester, 'Continue to Unbound');
-    expect(find.text('AUTHORIZE'), findsOneWidget);
+    expect(find.text('CONTINUE'), findsOneWidget);
     expect(find.text('Authorize to lock in.'), findsOneWidget);
-    await tapText(tester, 'AUTHORIZE');
+    await tapText(tester, 'CONTINUE');
     expect(find.text('CHOOSE APPS'), findsOneWidget);
     await tapText(tester, 'CHOOSE APPS');
     expect(find.text('Screen Time access is authorized.'), findsOneWidget);

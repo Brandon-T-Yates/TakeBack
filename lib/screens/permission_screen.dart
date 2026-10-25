@@ -14,6 +14,7 @@ class PermissionScreen extends StatelessWidget {
     final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
     final available = controller.setup.available;
     final native = controller.mode == RestrictionMode.native;
+    final android = controller.mode == RestrictionMode.android;
     final authorized =
         controller.authorization == AuthorizationStatus.authorized;
     return Scaffold(
@@ -39,13 +40,20 @@ class PermissionScreen extends StatelessWidget {
                   ? native
                         ? 'Unbound uses Screen Time to choose the apps that remain accessible while locked in.'
                         : 'Unbound uses Screen Time to choose the apps you want to allow in a future lock session.'
+                  : android
+                  ? 'Choose the installed apps you want to keep available. '
+                        'LOCK IN returns you Home when any other app opens.'
                   : 'Unbound will need device permissions to restrict apps. '
                         'Android blocking will follow the iOS implementation.',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 24),
             Text(
-              !isIOS
+              android
+                  ? 'Android needs one permission to lock in. The first time you '
+                        'tap LOCK IN, Unbound explains how it’s used before you '
+                        'turn it on. Nothing is enabled automatically.'
+                  : !isIOS
                   ? 'Permission setup is coming in a future version. Continuing '
                         'does not request or grant any device permissions.'
                   : native
@@ -56,13 +64,14 @@ class PermissionScreen extends StatelessWidget {
                   : 'Authorization and app selection are real. LOCK IN remains '
                         'a simulation and does not block any apps.',
             ),
-            if (available) ...[
+            if (available && !android) ...[
               const SizedBox(height: 20),
               AuthorizationSummary(controller.authorization),
             ],
             const SizedBox(height: 36),
             const Spacer(),
-            if (!native) const PrototypeNotice(),
+            if (controller.mode == RestrictionMode.prototype)
+              const PrototypeNotice(),
             const SizedBox(height: 20),
             ErrorNotice(controller.error),
             if (available && !authorized) ...[

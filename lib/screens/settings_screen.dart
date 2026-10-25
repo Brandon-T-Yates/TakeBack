@@ -86,14 +86,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
               widget.controller.mode == RestrictionMode.native
                   ? 'Unbound uses Apple’s Screen Time controls to restrict apps '
                         'you haven’t chosen to keep available.'
+                  : widget.controller.mode == RestrictionMode.android
+                  ? 'On Android, Unbound uses Android’s Accessibility service to '
+                        'see which app is opening. When LOCK IN is on and that app '
+                        'isn’t one you chose to keep, Unbound takes you back to '
+                        'your Home screen.'
                   : 'On supported iPhones, Unbound uses Apple’s Screen Time '
                         'controls to restrict apps you haven’t chosen to keep available.',
             ),
             const SizedBox(height: 28),
-            AuthorizationSummary(widget.controller.authorization),
+            AuthorizationSummary(
+              widget.controller.authorization,
+              android: widget.controller.mode == RestrictionMode.android,
+              androidAccess: widget.controller.androidAccessReady,
+            ),
             const SizedBox(height: 16),
             Text(
-              widget.controller.mode == RestrictionMode.native
+              widget.controller.mode == RestrictionMode.android
+                  ? 'Your allowed apps are saved as package names on this device. '
+                        'Unbound only uses the name of the app being opened. Nothing '
+                        'is stored, shared, or sent off your phone.'
+                  : widget.controller.mode == RestrictionMode.native
                   ? 'Unbound checks its native app restriction policy when you return. '
                         'Allowed app selections stay on your iPhone as private tokens. '
                         'Android blocking is not available yet.'
@@ -101,17 +114,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         'Allowed app selections stay on your iPhone as private tokens. '
                         'Android blocking is not available yet.',
             ),
-            const SizedBox(height: 28),
-            Text(
-              'Removing Unbound?',
-              style: Theme.of(
-                context,
-              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Unlock before deleting the app so your restrictions can be cleared properly.',
-            ),
+            if (widget.controller.mode != RestrictionMode.android) ...[
+              const SizedBox(height: 28),
+              Text(
+                'Removing Unbound?',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Unlock before deleting the app so your restrictions can be cleared properly.',
+              ),
+            ],
             const SizedBox(height: 32),
             const StepLabel('SUPPORT & PRIVACY'),
             const SizedBox(height: 8),

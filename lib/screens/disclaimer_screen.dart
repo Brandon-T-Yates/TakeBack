@@ -27,7 +27,10 @@ class DisclaimerScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 36),
-          DisclaimerText(nativeMode: controller.mode == RestrictionMode.native),
+          DisclaimerText(
+            nativeMode: controller.mode == RestrictionMode.native,
+            android: controller.mode == RestrictionMode.android,
+          ),
           const SizedBox(height: 32),
           const Spacer(),
           ErrorNotice(controller.error),

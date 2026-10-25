@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 
 import '../models/restriction_status.dart';
+import '../services/android_app_restriction_service.dart';
 import '../services/app_restriction_service.dart';
 import '../services/preferences_store.dart';
 
@@ -53,9 +54,22 @@ class TakeBackController extends ChangeNotifier {
       setup.selectionUsable &&
       setup.applicationCount >= 1 &&
       setup.applicationCount <= 50;
+  bool get androidAccessReady =>
+      setup.accessibilityEnabled && setup.accessibilityRunning;
   bool get canLockIn =>
       mode == RestrictionMode.prototype ||
-      (authorization == AuthorizationStatus.authorized && allowlistReady);
+      (mode == RestrictionMode.native &&
+          authorization == AuthorizationStatus.authorized &&
+          allowlistReady) ||
+      (mode == RestrictionMode.android && allowlistReady);
+
+  /// Android only: LOCK IN was tapped but Accessibility access must be turned
+  /// on first, so the disclosure is shown instead of locking.
+  bool get androidLockInNeedsAccess =>
+      mode == RestrictionMode.android &&
+      !needsUnlock &&
+      allowlistReady &&
+      !androidAccessReady;
 
   String? takeEphemeralNotice() {
     final notice = ephemeralNotice;
@@ -134,6 +148,15 @@ class TakeBackController extends ChangeNotifier {
                 'Could not confirm Unbound’s restrictions. Tap UNLOCK to retry clearing them.',
           ),
         );
+      } else if (mode == RestrictionMode.android) {
+        _applySetup(
+          const RestrictionSetupState(
+            mode: RestrictionMode.android,
+            lockdownState: LockdownState.error,
+            restrictionMessage:
+                'Could not confirm whether apps are being blocked. Tap UNLOCK to turn LOCK IN off.',
+          ),
+        );
       }
       rethrow;
     }
@@ -141,7 +164,7 @@ class TakeBackController extends ChangeNotifier {
 
   void _applySetup(RestrictionSetupState state) {
     setup = state;
-    if (mode == RestrictionMode.native) {
+    if (mode == RestrictionMode.native || mode == RestrictionMode.android) {
       locked = state.lockdownState == LockdownState.locked;
     }
   }
@@ -179,8 +202,14 @@ class TakeBackController extends ChangeNotifier {
   });
 
   Future<void> toggleLockdown() => _perform(() async {
+    if (mode == RestrictionMode.android &&
+        !needsUnlock &&
+        (!canLockIn || !androidAccessReady)) {
+      return;
+    }
     try {
-      if (mode == RestrictionMode.native && needsUnlock) {
+      if ((mode == RestrictionMode.native || mode == RestrictionMode.android) &&
+          needsUnlock) {
         // A displayed UNLOCK must never re-enable a policy that was just cleared.
         await _restrictions.disableLockdown();
       } else {
@@ -188,6 +217,20 @@ class TakeBackController extends ChangeNotifier {
       }
     } finally {
       await _readSetup();
+    }
+  });
+
+  /// Android only. Callers must show the Accessibility disclosure first.
+  /// Turning access on never locks; the user taps LOCK IN again afterwards.
+  Future<void> openAccessibilitySettings() => _perform(() async {
+    final restrictions = _restrictions;
+    if (restrictions is! AndroidAppRestrictionService) return;
+    if (!await restrictions.openAccessibilitySettings()) {
+      throw PlatformException(
+        code: 'settings_unavailable',
+        message:
+            'Couldn’t open Accessibility settings. Open Settings › Accessibility › Unbound.',
+      );
     }
   });
 

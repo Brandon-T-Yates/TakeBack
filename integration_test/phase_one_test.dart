@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:takeback/app.dart';
+import 'package:takeback/services/android_app_restriction_service.dart';
 import 'package:takeback/services/local_app_restriction_service.dart';
 import 'package:takeback/services/ios_app_restriction_service.dart';
 import 'package:takeback/services/preferences_store.dart';
@@ -17,6 +18,8 @@ TakeBackApp freshApp() {
       preferences: store,
       restrictions: defaultTargetPlatform == TargetPlatform.iOS
           ? IosAppRestrictionService(prototype)
+          : defaultTargetPlatform == TargetPlatform.android
+          ? AndroidAppRestrictionService()
           : prototype,
     ),
   );
@@ -25,69 +28,168 @@ TakeBackApp freshApp() {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Phase 1 flow with real device preferences', (tester) async {
-    // Clears only TakeBack's prototype/setup keys on the test device.
-    await SharedPreferencesAsync().clear(
-      allowList: {
-        PreferencesStore.disclaimerKey,
-        PreferencesStore.onboardingKey,
-        PreferencesStore.prototypeLockKey,
-      },
-    );
+  Future<void> clearSetupPreferences() => SharedPreferencesAsync().clear(
+    allowList: {
+      PreferencesStore.disclaimerKey,
+      PreferencesStore.onboardingKey,
+      PreferencesStore.prototypeLockKey,
+    },
+  );
 
-    Future<void> tap(String label) async {
-      await tester.ensureVisible(find.text(label));
-      await tester.tap(find.text(label));
+  testWidgets(
+    'Phase 1 flow with real device preferences',
+    skip: defaultTargetPlatform == TargetPlatform.android,
+    (tester) async {
+      // Clears only TakeBack's prototype/setup keys on the test device.
+      await clearSetupPreferences();
+
+      Future<void> tap(String label) async {
+        await tester.ensureVisible(find.text(label));
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+      }
+
+      await tester.pumpWidget(freshApp());
       await tester.pumpAndSettle();
-    }
-
-    await tester.pumpWidget(freshApp());
-    await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.north_west_rounded), findsNothing);
-    expect(
-      find.text('No account. No subscription. Just focus.'),
-      findsOneWidget,
-    );
-    await tap('Get Started');
-    await tap('I Understand');
-    await tap(
-      defaultTargetPlatform == TargetPlatform.iOS
-          ? 'Continue in Prototype'
-          : 'Continue',
-    );
-    expect(
-      find.text(
+      expect(find.byIcon(Icons.north_west_rounded), findsNothing);
+      expect(
+        find.text('No account. No subscription. Just focus.'),
+        findsOneWidget,
+      );
+      await tap('Get Started');
+      await tap('I Understand');
+      await tap(
         defaultTargetPlatform == TargetPlatform.iOS
-            ? 'App selection requires an iPhone'
-            : 'App selection is coming soon',
-      ),
-      findsOneWidget,
-    );
-    await tap('Continue to Unbound');
-    await tap('LOCK IN');
-    expect(find.text('UNLOCK'), findsOneWidget);
-    expect(
-      find.text('Prototype mode — no apps are blocked').hitTestable(),
-      findsOneWidget,
-    );
-    await tap('Edit Allowed Apps');
-    await tap('Done');
-    await tester.tap(find.byTooltip('Settings'));
-    await tester.pumpAndSettle();
-    expect(find.text('HOW UNBOUND WORKS'), findsOneWidget);
-    expect(find.text('support@tyleryates.me'), findsOneWidget);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
+            ? 'Continue in Prototype'
+            : 'Continue',
+      );
+      expect(
+        find.text(
+          defaultTargetPlatform == TargetPlatform.iOS
+              ? 'App selection requires an iPhone'
+              : 'App selection is coming soon',
+        ),
+        findsOneWidget,
+      );
+      await tap('Continue to Unbound');
+      await tap('LOCK IN');
+      expect(find.text('UNLOCK'), findsOneWidget);
+      expect(
+        find.text('Prototype mode — no apps are blocked').hitTestable(),
+        findsOneWidget,
+      );
+      await tap('Edit Allowed Apps');
+      await tap('Done');
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('HOW UNBOUND WORKS'), findsOneWidget);
+      expect(find.text('support@tyleryates.me'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
 
-    // Recreate all app state and the preference client, preserving device data.
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pumpAndSettle();
-    await tester.pumpWidget(freshApp());
-    await tester.pumpAndSettle();
-    expect(find.text('UNLOCK'), findsOneWidget);
-    await tap('UNLOCK');
-    expect(find.text('LOCK IN'), findsOneWidget);
-    expect(await PreferencesStore().prototypeLockEnabled, isFalse);
-    expect(tester.takeException(), isNull);
-  });
+      // Recreate all app state and the preference client, preserving device data.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(freshApp());
+      await tester.pumpAndSettle();
+      expect(find.text('UNLOCK'), findsOneWidget);
+      await tap('UNLOCK');
+      expect(find.text('LOCK IN'), findsOneWidget);
+      expect(await PreferencesStore().prototypeLockEnabled, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'Android setup uses the native bridge and real LOCK IN state',
+    skip: defaultTargetPlatform != TargetPlatform.android,
+    (tester) async {
+      await clearSetupPreferences();
+
+      Future<void> tap(String label) async {
+        await tester.ensureVisible(find.text(label));
+        await tester.tap(find.text(label));
+        await tester.pumpAndSettle();
+      }
+
+      void expectNoPhaseOneOrIosCopy() {
+        expect(find.text('SETUP READY'), findsNothing);
+        expect(find.text('ENABLE ACCESS'), findsNothing);
+        expect(find.text('Prototype mode — no apps are blocked'), findsNothing);
+        expect(find.textContaining('Screen Time'), findsNothing);
+        expect(find.textContaining('test build'), findsNothing);
+      }
+
+      String mainLabel() => const [
+        'UNLOCK',
+        'CHOOSE APPS',
+        'LOCK IN',
+      ].firstWhere((label) => find.text(label).evaluate().isNotEmpty);
+
+      await tester.pumpWidget(freshApp());
+      await tester.pumpAndSettle();
+      await tap('Get Started');
+      expect(find.text('When you lock in'), findsOneWidget);
+      await tap('I Understand');
+      expect(
+        find.textContaining('Android needs one permission to lock in'),
+        findsOneWidget,
+      );
+      expectNoPhaseOneOrIosCopy();
+      await tap('Continue');
+      expect(find.text('Choose Allowed Apps'), findsOneWidget);
+      expect(find.text('App selection is coming soon'), findsNothing);
+      expectNoPhaseOneOrIosCopy();
+      await tap('Continue to Unbound');
+      expectNoPhaseOneOrIosCopy();
+
+      // Device allowlist, lock, and Accessibility state are preserved.
+      if (mainLabel() == 'UNLOCK') await tap('UNLOCK');
+      if (find.text('Ready to unlock?').evaluate().isNotEmpty) {
+        await tap('Unlock');
+      }
+      final label = mainLabel();
+      if (label == 'LOCK IN') {
+        await tap('LOCK IN');
+      }
+      if (find
+          .text('Android needs one permission to lock in')
+          .evaluate()
+          .isNotEmpty) {
+        // Accessibility access is off: the disclosure, never a lock or error.
+        expect(find.text('Continue to Settings'), findsOneWidget);
+        await tap('Not Now');
+        expect(find.text('LOCK IN'), findsOneWidget);
+        // Still off, so the next LOCK IN explains again instead of locking.
+        await tap('LOCK IN');
+        expect(find.text('Continue to Settings'), findsOneWidget);
+        await tap('Not Now');
+        expect(find.text('LOCK IN'), findsOneWidget);
+      } else if (label == 'LOCK IN') {
+        expect(find.text('UNLOCK'), findsOneWidget);
+        expect(
+          find.text('Apps outside your allowed list return you Home.'),
+          findsOneWidget,
+        );
+
+        // Recreate all app state; the native lock survives.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        await tester.pumpWidget(freshApp());
+        await tester.pumpAndSettle();
+        expect(find.text('UNLOCK'), findsOneWidget);
+        await tap('UNLOCK');
+        await tap('Unlock');
+        expect(find.text('LOCK IN'), findsOneWidget);
+      }
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      await tester.pumpWidget(freshApp());
+      await tester.pumpAndSettle();
+      expect(mainLabel(), label);
+      expectNoPhaseOneOrIosCopy();
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

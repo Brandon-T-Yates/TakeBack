@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="unbound_ink">#203D36</color>
+    <color name="unbound_canvas">#F7F6F2</color>
+    <color name="unbound_muted">#626C66</color>
+    <color name="unbound_border">#24203D36</color>
+
+    <string name="allowed_apps_title">Keep what matters.</string>
+    <string name="allowed_apps_intro">Choose 1–50 apps to keep available while locked in. Opening any other app returns you to the Home Screen.</string>
+    <string name="allowed_apps_search">Search apps</string>
+    <string name="allowed_apps_count">%1$d of 50 selected</string>
+    <string name="allowed_apps_count_empty">Choose at least 1 app</string>
+    <string name="allowed_apps_limit">You can keep up to 50 apps.</string>
+    <string name="allowed_apps_empty">No matching apps</string>
+    <string name="allowed_apps_save">Save</string>
+    <string name="allowed_apps_cancel">Cancel</string>
+    <string name="allowed_apps_clear">Clear Selection</string>
+    <string name="allowed_apps_clear_title">Clear allowed apps?</string>
+    <string name="allowed_apps_clear_message">Unbound will forget the apps you chose. You can choose again any time.</string>
+    <string name="allowed_apps_clear_confirm">Clear</string>
+
+    <style name="AllowedAppsTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:colorAccent">@color/unbound_ink</item>
+        <item name="android:colorPrimary">@color/unbound_ink</item>
+        <item name="android:colorControlActivated">@color/unbound_ink</item>
+        <item name="android:windowBackground">@color/unbound_canvas</item>
+        <item name="android:statusBarColor">@color/unbound_canvas</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:textColorPrimary">@color/unbound_ink</item>
+    </style>
+</resources>

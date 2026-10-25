@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
 import 'app.dart';
+import 'services/android_app_restriction_service.dart';
 import 'services/local_app_restriction_service.dart';
 import 'services/ios_app_restriction_service.dart';
 import 'services/preferences_store.dart';
@@ -17,6 +18,8 @@ void main() {
         preferences: preferences,
         restrictions: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
             ? IosAppRestrictionService(prototype)
+            : !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+            ? AndroidAppRestrictionService()
             : prototype,
       ),
     ),

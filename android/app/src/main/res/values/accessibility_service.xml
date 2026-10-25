@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_label">Unbound</string>
+    <string name="accessibility_service_description">Unbound uses this to see which app is opening. When LOCK IN is on and that app isn\'t one you chose to keep, Unbound takes you back to your Home screen. Unbound only uses the name of the app being opened. It does not read your screen, what you type, or your messages. Unbound doesn\'t save which apps you open. Nothing is shared or sent off your phone.</string>
+</resources>

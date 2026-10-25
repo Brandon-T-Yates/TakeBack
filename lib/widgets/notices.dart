@@ -3,13 +3,29 @@ import '../theme.dart';
 import '../models/restriction_status.dart';
 
 class AuthorizationSummary extends StatelessWidget {
-  const AuthorizationSummary(this.status, {super.key});
+  const AuthorizationSummary(
+    this.status, {
+    super.key,
+    this.android = false,
+    this.androidAccess = false,
+  });
   final AuthorizationStatus status;
+  final bool android;
+  final bool androidAccess;
 
   @override
   Widget build(BuildContext context) => Semantics(
     liveRegion: true,
-    child: Text(switch (status) {
+    child: Text(
+      android
+          ? androidAccess
+                ? 'Android access is on.'
+                : 'Unbound asks for one Android permission the first time you lock in.'
+          : _screenTimeSummary,
+    ),
+  );
+
+  String get _screenTimeSummary => switch (status) {
       AuthorizationStatus.authorized => 'Screen Time access is authorized.',
       AuthorizationStatus.denied =>
         'Screen Time access is denied. Authorize again to choose apps.',
@@ -17,8 +33,7 @@ class AuthorizationSummary extends StatelessWidget {
         'Screen Time access is not authorized yet.',
       AuthorizationStatus.unavailable =>
         'Screen Time setup is unavailable on this device.',
-    }),
-  );
+    };
 }
 
 class PrototypeNotice extends StatelessWidget {
@@ -63,10 +78,18 @@ class ErrorNotice extends StatelessWidget {
 }
 
 class DisclaimerText extends StatelessWidget {
-  const DisclaimerText({super.key, this.nativeMode = false});
+  const DisclaimerText({
+    super.key,
+    this.nativeMode = false,
+    this.android = false,
+  });
   final bool nativeMode;
+  final bool android;
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) =>
+      android ? const _AndroidDisclaimer() : _screenTimeDisclaimer;
+
+  Widget get _screenTimeDisclaimer => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       const _DisclaimerItem(
@@ -93,6 +116,35 @@ class DisclaimerText extends StatelessWidget {
         'You can unlock in Unbound or change or revoke Unbound’s Screen Time '
             'access in iOS Settings. Do not rely on Unbound to guarantee '
             'access to—or restriction of—critical or emergency apps.',
+      ),
+    ],
+  );
+}
+
+class _AndroidDisclaimer extends StatelessWidget {
+  const _AndroidDisclaimer();
+  @override
+  Widget build(BuildContext context) => const Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _DisclaimerItem(
+        'A focus tool, not a safety system',
+        'Unbound helps you focus. It is not a security system, '
+            'parental-control guarantee, or emergency-access mechanism.',
+      ),
+      SizedBox(height: 24),
+      _DisclaimerItem(
+        'When you lock in',
+        'Opening an app outside your allowed set returns you to the Home '
+            'Screen. Calls, your keyboard, Settings, and essential system '
+            'screens stay available.',
+      ),
+      SizedBox(height: 24),
+      _DisclaimerItem(
+        'You stay in control',
+        'You can unlock in Unbound at any time, or turn off Unbound’s '
+            'Accessibility access in Android Settings. Do not rely on Unbound '
+            'to guarantee access to—or restriction of—critical or emergency apps.',
       ),
     ],
   );

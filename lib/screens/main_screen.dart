@@ -6,6 +6,7 @@ import '../widgets/brand.dart';
 import '../widgets/notices.dart';
 import '../widgets/page_body.dart';
 import 'allowed_apps_screen.dart';
+import 'android_access_screen.dart';
 import 'settings_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -27,8 +28,33 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  /// Android LOCK IN before Accessibility access is on: explain and offer
+  /// Settings. Turning access on never locks; LOCK IN must be tapped again.
+  Future<void> _requestAndroidAccess() async {
+    _promptOpen = true;
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => AndroidAccessScreen(controller: controller),
+        ),
+      );
+    } finally {
+      _promptOpen = false;
+    }
+  }
+
   Future<void> _handleLockControl() async {
     if (_promptOpen || controller.busy) return;
+    if (controller.mode == RestrictionMode.android && !controller.needsUnlock) {
+      if (!controller.allowlistReady) {
+        await _openAllowedApps();
+        return;
+      }
+      if (controller.androidLockInNeedsAccess) {
+        await _requestAndroidAccess();
+        return;
+      }
+    }
     if (controller.mode == RestrictionMode.native &&
         !controller.needsUnlock &&
         !controller.canLockIn) {
@@ -89,7 +115,10 @@ class _MainScreenState extends State<MainScreen> {
       }
       return;
     }
-    if (controller.mode != RestrictionMode.native || !controller.needsUnlock) {
+    final enforced =
+        controller.mode == RestrictionMode.native ||
+        controller.mode == RestrictionMode.android;
+    if (!enforced || !controller.needsUnlock) {
       await controller.toggleLockdown();
       return;
     }
@@ -140,13 +169,21 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final locked = controller.locked;
     final native = controller.mode == RestrictionMode.native;
+    final android = controller.mode == RestrictionMode.android;
     final status = controller.lockdownState;
     final needsUnlock = controller.needsUnlock;
     final needsAuthorization =
         native &&
         !needsUnlock &&
         controller.authorization != AuthorizationStatus.authorized;
-    final needsAllowlist = native && !needsUnlock && !controller.allowlistReady;
+    final needsAllowlist =
+        (native || android) && !needsUnlock && !controller.allowlistReady;
+    final accessInterrupted =
+        android &&
+        !needsUnlock &&
+        !needsAllowlist &&
+        controller.androidLockInNeedsAccess &&
+        controller.setup.accessInterrupted;
     final actionLabel = needsUnlock
         ? 'UNLOCK'
         : needsAuthorization
@@ -219,11 +256,15 @@ class _MainScreenState extends State<MainScreen> {
                   : locked
                   ? native
                         ? 'Your app restriction policy is active.'
+                        : android
+                        ? 'Apps outside your allowed list return you Home.'
                         : 'Your prototype session is active.'
                   : needsAuthorization
                   ? 'Authorize to lock in.'
                   : needsAllowlist
                   ? 'Choose 1–50 apps to lock in.'
+                  : accessInterrupted
+                  ? 'Android access is off. Tap LOCK IN to turn it back on.'
                   : 'A little intention goes a long way.',
               textAlign: TextAlign.center,
             ),

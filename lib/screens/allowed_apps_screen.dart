@@ -116,6 +116,8 @@ class _AllowedAppsBody extends StatelessWidget {
             Text(
               controller.mode == RestrictionMode.native
                   ? 'Select the apps you want available while locked in. Everything else will be restricted. Choose 1–50 apps. Unlock before changing your allowed apps.'
+                  : controller.mode == RestrictionMode.android
+                  ? 'Choose 1–50 apps to keep available while locked in. Unlock before changing them.'
                   : 'Choose individual apps to ALLOW during a future lock session. No apps are blocked yet.',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
@@ -294,7 +296,9 @@ class _AllowedAppsCard extends StatelessWidget {
               : 12,
         ),
         Text(
-          controller.setup.available
+          controller.mode == RestrictionMode.android
+              ? 'Saved on this device. Reopen the picker to change or clear.'
+              : controller.setup.available
               ? 'Categories save as the apps inside them. Websites aren\'t saved. '
                     'You can review your saved apps in the native picker.'
               : Theme.of(context).platform == TargetPlatform.iOS
@@ -311,7 +315,11 @@ class _AllowedAppsCard extends StatelessWidget {
                 ? 12
                 : 20,
           ),
-          AuthorizationSummary(controller.authorization),
+          AuthorizationSummary(
+            controller.authorization,
+            android: controller.mode == RestrictionMode.android,
+            androidAccess: controller.androidAccessReady,
+          ),
           SizedBox(
             height: tight
                 ? 4

@@ -83,7 +83,7 @@ void main() {
       });
     PackageInfo.setMockInitialValues(
       appName: 'Unbound',
-      packageName: 'com.tyleryates.takeback',
+      packageName: 'com.tyleryates.unbound',
       version: '0.1.0',
       buildNumber: '1',
       buildSignature: '',
@@ -420,6 +420,13 @@ void main() {
         expect(find.text('Continue to Settings'), findsOneWidget);
         expect(
           find.textContaining('only uses the name of the app'),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining(
+            'Unbound doesn’t save which apps you open. Nothing is shared or '
+            'sent off your phone.',
+          ),
           findsOneWidget,
         );
         expect(

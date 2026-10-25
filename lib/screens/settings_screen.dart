@@ -104,8 +104,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               widget.controller.mode == RestrictionMode.android
                   ? 'Your allowed apps are saved as package names on this device. '
-                        'Unbound only uses the name of the app being opened. Nothing '
-                        'is stored, shared, or sent off your phone.'
+                        'Unbound only uses the name of the app being opened. Unbound '
+                        'doesn’t save which apps you open. Nothing is shared or sent '
+                        'off your phone.'
                   : widget.controller.mode == RestrictionMode.native
                   ? 'Unbound checks its native app restriction policy when you return. '
                         'Allowed app selections stay on your iPhone as private tokens. '

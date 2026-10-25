@@ -1,4 +1,4 @@
-package com.tyleryates.takeback
+package com.tyleryates.unbound
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EnforcementPolicyTest {
-    private val unbound = "com.tyleryates.takeback"
+    private val unbound = "com.tyleryates.unbound"
     private val launcher = "com.example.launcher"
     private val settings = "com.android.settings"
     private val allowed = "com.example.allowed"

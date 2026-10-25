@@ -48,9 +48,9 @@ class AndroidAccessScreen extends StatelessWidget {
             const SizedBox(height: 16),
             const Text(
               'Unbound only uses the name of the app being opened. It does not '
-              'read your screen, what you type, or your messages. Nothing is '
-              'stored, shared, or sent off your phone. This access isn’t used '
-              'for ads or analytics.',
+              'read your screen, what you type, or your messages. Unbound '
+              'doesn’t save which apps you open. Nothing is shared or sent off '
+              'your phone. This access isn’t used for ads or analytics.',
             ),
             const SizedBox(height: 16),
             Text(
